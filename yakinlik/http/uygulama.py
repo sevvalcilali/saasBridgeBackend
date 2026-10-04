@@ -53,7 +53,8 @@ def _statik_yanit(dist: Path, yol: str) -> Response:
     if not yol:
         index = dist / "index.html"
         if index.is_file():
-            return FileResponse(index, media_type=_TURLER[".html"])
+            # no-cache: arayüz yeniden derlenince tarayıcı eski index.html'i (silinmiş .js adlarıyla) kullanmasın.
+            return FileResponse(index, media_type=_TURLER[".html"], headers={"Cache-Control": "no-cache"})
         return PlainTextResponse(f"Arayüz derlenmedi: {index} yok. SaasBridge'de `npm run build` çalıştırın.\n")
     kok = dist.resolve()
     dosya = (kok / yol).resolve()

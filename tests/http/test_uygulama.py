@@ -29,6 +29,14 @@ async def test_kok_adres_arayuzu_verir(istemci, dist, adres):
     assert yanit.text == (dist / "index.html").read_text(encoding="utf-8")
 
 
+async def test_index_html_tarayici_onbelleginde_bayatlamaz(istemci):
+    # Arayüz yeniden derlenince index.html yeni .js adını gösterir; tarayıcı eski kopyayı sormadan
+    # kullanırsa silinmiş dosyayı ister ve sayfa boş kalır.
+    yanit = await istemci.get("/")
+
+    assert yanit.headers["cache-control"] == "no-cache"
+
+
 @pytest.mark.parametrize(
     ("yol", "beklenen_tur"),
     [
