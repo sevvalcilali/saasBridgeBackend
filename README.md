@@ -10,6 +10,7 @@ Arayüzün (https://github.com/sevvalcilali/SaasBridge) gerçek sunucusu: alıc�
 
 **Durum (04.10.2026):** B0 (iskelet) bitti ve onaylandı: sunucu derlenmiş arayüzü ve `GET /api/health` ucunu sunuyor. `/state`, `/events`,
 `/control` B2'de gelecek; o zamana kadar arayüz "Sunucuya bağlanılamıyor" gösterir. Teslim notu: `docs/B0_NOT.md`.
+B1 (benzetim, kayıt / oynatma, sinyal hesapları) yazıldı, onay bekliyor: `docs/B1_NOT.md`.
 
 Teknoloji: Python 3.11+, FastAPI + uvicorn, pyserial, SQLite (stdlib).
 
