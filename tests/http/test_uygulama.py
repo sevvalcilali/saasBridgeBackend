@@ -99,8 +99,47 @@ async def test_dist_yokken_kok_adres_aciklama_verir_ve_sunucu_calisir(istemci_ac
     assert saglik.status_code == 200
 
 
-async def test_bilinmeyen_api_ucu_404_ve_sozlesme_govdesi(istemci):
-    yanit = await istemci.get("/api/yok")
+@pytest.mark.parametrize(
+    "yol",
+    [
+        "/%00",  # NUL baytı
+        "/assets/%00.js",
+        "/" + "a" * 300,  # dosya adı sınırını aşan parça
+    ],
+)
+async def test_bozuk_yol_404_doner_sunucu_hatasi_degil(istemci, yol):
+    yanit = await istemci.get(yol)
+
+    assert yanit.status_code == 404
+
+
+@pytest.mark.parametrize(
+    "adres",
+    [
+        "http://test///sunucu/paylasim/x",  # ağ yolu (UNC), eğik çizgiyle
+        "http://test/%5C%5Csunucu%5Cpaylasim%5Cx",  # ağ yolu, ters eğik çizgiyle
+        "http://test/C:%5CWindows%5Cwin.ini",  # sürücü harfi
+        "http://test/C:/Windows/win.ini",  # sürücü harfi, eğik çizgiyle
+        "http://test/assets%5C..%5C..%5Cgizli.txt",  # ters eğik çizgiyle üst klasör
+    ],
+)
+async def test_windows_ag_ve_surucu_yollari_dosya_sistemine_sorulmadan_reddedilir(istemci, monkeypatch, adres):
+    # Windows'ta \\sunucu\paylasim yolunu çözmek bile o sunucuya oturum açar (kimlik bilgisi sızar) ve ağ
+    # zaman aşımına kadar olay döngüsünü kilitler. Böyle yollar dosya sistemine hiç sorulmamalı.
+    def dokunuldu(self, *args, **kwargs):
+        raise AssertionError(f"dosya sistemine soruldu: {self}")
+
+    monkeypatch.setattr("pathlib.Path.resolve", dokunuldu)
+
+    yanit = await istemci.get(adres)
+
+    assert yanit.status_code == 404
+
+
+@pytest.mark.parametrize("yontem", ["GET", "POST", "PUT", "PATCH", "DELETE"])
+async def test_bilinmeyen_api_ucu_404_ve_sozlesme_govdesi(istemci, yontem):
+    # Arayüz PATCH ve DELETE de kullanır: tanımsız uç her yöntemde sözleşme gövdesiyle 404 dönmeli.
+    yanit = await istemci.request(yontem, "/api/yok")
 
     assert yanit.status_code == 404
     govde = yanit.json()

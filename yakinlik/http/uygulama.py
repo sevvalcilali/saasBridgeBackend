@@ -56,8 +56,19 @@ def _statik_yanit(dist: Path, yol: str) -> Response:
             # no-cache: arayüz yeniden derlenince tarayıcı eski index.html'i (silinmiş .js adlarıyla) kullanmasın.
             return FileResponse(index, media_type=_TURLER[".html"], headers={"Cache-Control": "no-cache"})
         return PlainTextResponse(f"Arayüz derlenmedi: {index} yok. SaasBridge'de `npm run build` çalıştırın.\n")
-    kok = dist.resolve()
-    dosya = (kok / yol).resolve()
-    if not dosya.is_relative_to(kok) or not dosya.is_file():
-        return PlainTextResponse("bulunamadı\n", status_code=404)
+    # Önce yolun kendisine bak, dosya sistemine sorma: Windows'ta \\sunucu\paylasim ya da C:\… yolunu
+    # çözmek bile o sunucuya oturum açar ve olay döngüsünü kilitler. dist/ içindeki dosyalarda bunlar olmaz.
+    if yol.startswith("/") or "\\" in yol or ":" in yol or "\x00" in yol or ".." in yol.split("/"):
+        return _bulunamadi()
+    try:
+        kok = dist.resolve()
+        dosya = (kok / yol).resolve()  # dist/ içinden dışarıyı gösteren kısayol (symlink) da dışarıda sayılır
+        if not dosya.is_relative_to(kok) or not dosya.is_file():
+            return _bulunamadi()
+    except (OSError, ValueError):  # ör. dosya adı sınırını aşan yol
+        return _bulunamadi()
     return FileResponse(dosya, media_type=_TURLER.get(dosya.suffix.lower(), _BILINMEYEN_TUR))
+
+
+def _bulunamadi() -> Response:
+    return PlainTextResponse("bulunamadı\n", status_code=404)
