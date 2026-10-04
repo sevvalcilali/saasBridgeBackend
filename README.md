@@ -17,6 +17,13 @@ Teknoloji: Python 3.11+, FastAPI + uvicorn, pyserial, SQLite (stdlib).
 Gereken: Python 3.11+. Arayüz reposu yan klasörde (`../SaasBridge`) ve derlenmiş olmalı (orada `npm run build`).
 
 ```bash
+./baslat.sh                  # .venv yoksa kurar, sunucuyu başlatır → http://localhost:8002 (Windows: baslat.bat)
+./baslat.sh --port 8010      # argümanlar sunucuya geçer: --port --kaynak --dist --veri --seri
+```
+
+Elle kurulum ve testler:
+
+```bash
 python3.11 -m venv .venv
 .venv/bin/pip install -r requirements-dev.txt   # yalnız çalıştırmak için: requirements.txt
 .venv/bin/python -m yakinlik                    # → http://localhost:8002 (ayarlar: config.toml; komut satırı ezer)
