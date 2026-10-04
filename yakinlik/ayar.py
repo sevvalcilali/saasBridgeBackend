@@ -2,7 +2,7 @@
 import argparse
 import tomllib
 from collections.abc import Sequence
-from dataclasses import dataclass, fields, replace
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 KAYNAKLAR = ("benzetim", "kayit", "seri")
@@ -23,36 +23,73 @@ class Ayar:
     tarih: str = "28.09.2026 · Demo Salonu"
 
 
+def _tam_sayi(deger: object) -> bool:
+    return isinstance(deger, int) and not isinstance(deger, bool)  # TOML'da true/false da int sayılmasın
+
+
+def _sayi(deger: object) -> bool:
+    return isinstance(deger, (int, float)) and not isinstance(deger, bool)
+
+
+def _metin(deger: object) -> bool:
+    return isinstance(deger, str) and deger != ""
+
+
+# config.toml'un üst düzey anahtarı → (değer geçerli mi, iletide "ne olmalı")
+_DENETIMLER = {
+    "port": (lambda deger: _tam_sayi(deger) and 1 <= deger <= 65535, "1–65535 arası tam sayı"),
+    "host": (_metin, "metin"),
+    "kaynak": (lambda deger: deger in KAYNAKLAR, " | ".join(KAYNAKLAR)),
+    "dist": (_metin, "metin (klasör yolu)"),
+    "veri": (_metin, "metin (yol)"),
+    "seri": (_metin, "metin (aygıt adı)"),
+    "esik": (_sayi, "sayı (dBm)"),
+}
 # config.toml'daki [etkinlik] tablosunun anahtarı → Ayar alanı
 _ETKINLIK_ALANLARI = {"ad": "etkinlik_adi", "alt_baslik": "alt_baslik", "tarih": "tarih"}
-_UST_ANAHTARLAR = {alan.name for alan in fields(Ayar)} - set(_ETKINLIK_ALANLARI.values())
 _YOL_ALANLARI = ("dist", "veri")
 
 
 def ayar_yukle(argumanlar: Sequence[str] | None = None, config_yolu: Path = Path("config.toml")) -> Ayar:
-    """Ayarları yükler; `argumanlar` verilmezse sys.argv okunur. Geçersiz config → ValueError."""
+    """Ayarları yükler; `argumanlar` verilmezse sys.argv okunur. Okunamayan ya da geçersiz config → ValueError."""
     ayar = Ayar()
     if config_yolu.exists():
-        with config_yolu.open("rb") as dosya:
-            ayar = _configten(ayar, tomllib.load(dosya))
+        ayar = replace(ayar, **_configi_oku(config_yolu))
     return _komut_satirindan(ayar, argumanlar)
 
 
-def _configten(ayar: Ayar, config: dict) -> Ayar:
+def _configi_oku(yol: Path) -> dict:
+    """config.toml → Ayar alanları. Dosyayı organizatör elle düzenler: her hata dosyayı ve anahtarı söyler,
+    yazım ya da tür hatası sessizce geçmez (yoksa sunucu yanlış ayarla açılır ve kimse fark etmez)."""
+    try:
+        config = tomllib.loads(yol.read_text(encoding="utf-8-sig"))  # -sig: Windows Not Defteri başa BOM koyabilir
+    except UnicodeDecodeError as hata:
+        raise ValueError(f"{yol}: dosya UTF-8 olarak kaydedilmeli") from hata
+    except (OSError, tomllib.TOMLDecodeError) as hata:
+        raise ValueError(f"{yol}: okunamadı ({hata})") from hata
+
     ust = {anahtar: deger for anahtar, deger in config.items() if anahtar != "etkinlik"}
     etkinlik = config.get("etkinlik", {})
-    # Yazım hatası sessizce yok sayılmasın: sunucu yanlış ayarla açılır, kimse fark etmez.
-    bilinmeyen = sorted(set(ust) - _UST_ANAHTARLAR) + sorted(
+    if not isinstance(etkinlik, dict):
+        raise ValueError(f"{yol}: etkinlik bir tablo ([etkinlik]) olmalı, gelen: {etkinlik!r}")
+    bilinmeyen = sorted(set(ust) - set(_DENETIMLER)) + sorted(
         f"etkinlik.{anahtar}" for anahtar in set(etkinlik) - set(_ETKINLIK_ALANLARI)
     )
     if bilinmeyen:
-        raise ValueError(f"config.toml: bilinmeyen anahtar: {', '.join(bilinmeyen)}")
-    if "kaynak" in ust and ust["kaynak"] not in KAYNAKLAR:
-        raise ValueError(f"config.toml: kaynak {' | '.join(KAYNAKLAR)} olmalı, gelen: {ust['kaynak']!r}")
+        raise ValueError(f"{yol}: bilinmeyen anahtar: {', '.join(bilinmeyen)}")
+    for anahtar, deger in ust.items():
+        gecerli, beklenen = _DENETIMLER[anahtar]
+        if not gecerli(deger):
+            raise ValueError(f"{yol}: {anahtar} {beklenen} olmalı, gelen: {deger!r}")
+    for anahtar, deger in etkinlik.items():
+        if not isinstance(deger, str):
+            raise ValueError(f"{yol}: etkinlik.{anahtar} metin olmalı, gelen: {deger!r}")
+
+    alanlar = {**ust, **{_ETKINLIK_ALANLARI[anahtar]: deger for anahtar, deger in etkinlik.items()}}
     for alan in _YOL_ALANLARI:
-        if alan in ust:
-            ust[alan] = Path(ust[alan])
-    return replace(ayar, **ust, **{_ETKINLIK_ALANLARI[anahtar]: deger for anahtar, deger in etkinlik.items()})
+        if alan in alanlar:
+            alanlar[alan] = Path(alanlar[alan])
+    return alanlar
 
 
 def _komut_satirindan(ayar: Ayar, argumanlar: Sequence[str] | None) -> Ayar:

@@ -56,10 +56,12 @@ def test_sunucu_acilir_ve_ctrl_c_ile_temiz_kapanir(tmp_path):
 
 
 def test_bozuk_config_toml_anlasilir_hatayla_kapanir(tmp_path):
-    (tmp_path / "config.toml").write_text("prot = 9000\n", encoding="utf-8")
+    # Denetim bir gün bozulursa sunucu açılır; o durumda bile yalnız bu makineyi ve boş bir portu dinlesin.
+    (tmp_path / "config.toml").write_text('host = "127.0.0.1"\nprot = 9000\n', encoding="utf-8")
 
     sonuc = subprocess.run(
-        [sys.executable, "-m", "yakinlik"], cwd=tmp_path, env=ORTAM, capture_output=True, text=True, timeout=20,
+        [sys.executable, "-m", "yakinlik", "--port", str(bos_port())],
+        cwd=tmp_path, env=ORTAM, capture_output=True, text=True, timeout=20,
     )
 
     assert sonuc.returncode != 0

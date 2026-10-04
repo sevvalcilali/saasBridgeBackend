@@ -22,6 +22,64 @@ def test_config_ve_arguman_yokken_sozlesme_varsayilanlari(tmp_path):
     assert ayar.esik == -72           # brief §2 varsayılan eşik
     assert ayar.veri is None
     assert ayar.seri is None
+    assert ayar.host == "0.0.0.0"     # masa tableti ve salon ekranı başka cihazdan bağlanır (PLAN Bölüm 11)
+
+
+@pytest.mark.parametrize(
+    ("config", "anahtar"),
+    [
+        ('port = "8002"\n', "port"),
+        ("port = true\n", "port"),
+        ("port = 80.5\n", "port"),
+        ("port = 99999\n", "port"),
+        ("port = 0\n", "port"),
+        ("host = 5\n", "host"),
+        ("dist = 5\n", "dist"),
+        ('veri = ["a"]\n', "veri"),
+        ("seri = 5\n", "seri"),
+        ('esik = "-68"\n', "esik"),
+        ("esik = true\n", "esik"),
+        ("etkinlik = 5\n", "etkinlik"),
+        ('etkinlik = "x"\n', "etkinlik"),
+        ('[[etkinlik]]\nad = "x"\n', "etkinlik"),
+        ("[etkinlik]\nad = 5\n", "etkinlik.ad"),
+    ],
+)
+def test_configteki_yanlis_turde_deger_reddedilir(tmp_path, config, anahtar):
+    # Yanlış türdeki değer (ör. esik = "-68") sessizce kabul edilirse hata açılışta değil,
+    # etkinlik sırasında çıkar. İleti anahtarı ve ne olması gerektiğini söylemeli.
+    with pytest.raises(ValueError, match=f"{anahtar}.* olmalı"):
+        yukle(tmp_path, config)
+
+
+def test_bozuk_toml_hatasi_dosyayi_soyler(tmp_path):
+    with pytest.raises(ValueError, match="config.toml"):
+        yukle(tmp_path, "port = \n")
+
+
+def test_bom_ile_kaydedilmis_config_okunur(tmp_path):
+    # Windows Not Defteri UTF-8 dosyanın başına BOM koyabilir.
+    yol = tmp_path / "config.toml"
+    yol.write_bytes(b"\xef\xbb\xbfport = 9000\n")
+
+    assert ayar_yukle([], config_yolu=yol).port == 9000
+
+
+def test_utf8_olmayan_config_ne_yapilacagini_soyler(tmp_path):
+    # Eski Not Defteri "ANSI" (Windows-1254) kaydeder; "ş" o kodlamada tek bayttır, UTF-8 değildir.
+    yol = tmp_path / "config.toml"
+    yol.write_bytes('[etkinlik]\nad = "Buluşma"\n'.encode("cp1254"))
+
+    with pytest.raises(ValueError, match="UTF-8"):
+        ayar_yukle([], config_yolu=yol)
+
+
+def test_okunamayan_config_dosyayi_soyler(tmp_path):
+    yol = tmp_path / "config.toml"
+    yol.mkdir()  # dosya yerine klasör
+
+    with pytest.raises(ValueError, match="config.toml"):
+        ayar_yukle([], config_yolu=yol)
 
 
 def test_config_toml_yalniz_yazdigi_ayarlari_degistirir(tmp_path):
