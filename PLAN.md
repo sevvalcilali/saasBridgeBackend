@@ -16,8 +16,8 @@
 
 ## ⏩ DEVİR NOTU (04.10.2026)
 
-- **Durum:** B0 (iskelet) kodu yazıldı — `b0-iskelet` dalında, Şevval'in onayı bekleniyor (`docs/B0_NOT.md`). Sunucu
-  derlenmiş arayüzü ve `/api/health`'i veriyor; veri uçları yok. Sıradaki: B1 (ayrı onay).
+- **Durum:** B0 (iskelet) bitti ve onaylandı (04.10.2026; teslim notu `docs/B0_NOT.md`). Sunucu
+  derlenmiş arayüzü ve `/api/health`'i veriyor; veri uçları yok. Sıradaki: B1 (ayrı onay; B1.3'ten önce Bölüm 16.3 madde 6 karara bağlanmalı).
 - **Çalıştırma:** `./baslat.sh` (ya da `.venv/bin/python -m yakinlik`) → `http://localhost:8002`; testler `.venv/bin/pytest`.
 - **Kardeş repo:** https://github.com/sevvalcilali/SaasBridge — arayüz, mock sunucu (`mock-server/mock.js`, davranışın çalışan
   şartnamesi), sözleşme belgesi (`SUNUCUDAN_ISTENENLER.md`), gereksinim belgesi (`UI_TASARIM_BRIEF.md` §2, §5, §9).
@@ -476,7 +476,7 @@ CREATE TABLE ayar      (anahtar TEXT PRIMARY KEY, deger TEXT);               -- 
 
 Durum işaretleri: ⬜ onay bekliyor · 🟡 devam ediyor · ✅ bitti ve onaylandı
 
-### ⬜ Faz B — Gerçek sunucu (Python) (planlandı 03.10.2026, onay bekliyor)
+### 🟡 Faz B — Gerçek sunucu (Python) (planlandı 03.10.2026; B0 bitti 04.10.2026, sonraki fazlar ayrı onayla)
 
 **Amaç:** Arayüzün mock'tan aldığı her şeyi gerçek bir sunucudan, aynı sözleşmeyle vermek. Gerekçe, mimari, veri modeli ve
 kurallar Bölüm 1–13'te; **burası uygulama sırası ve kabul ölçütleridir.** Her B fazı ayrı onayla başlar (Bölüm 0.1), kendi
@@ -485,7 +485,7 @@ commit'lerini alır, sonunda `docs/Bn_NOT.md` yazılır. Süreler tek kişi, tam
 **Geliştirme döngüsü:** `python -m yakinlik --kaynak benzetim --port 8002` (bu repo) + `SaasBridge` kökünde `npx vite`
 (Vite proxy'si zaten 8002'ye gider). Doğrulama sırası Bölüm 0.4.
 
-#### B0 🟡 İskelet (tahmin: 1 gün) — kod bitti (04.10.2026, dal `b0-iskelet`), onay bekliyor
+#### B0 ✅ İskelet (tahmin: 1 gün) — bitti ve onaylandı (04.10.2026)
 - **Yapıldı** (ayrıntı ve gerekçeler: `docs/B0_NOT.md`):
   - B0.1 ✅ Sürüm `yakinlik/__init__.py`'de, bağımlılıklar `requirements.txt`'te tek yerde (pyproject oradan okur); paketler
     kurulu sürüme sabitlendi. `.gitignore` zaten yeterliydi, yalnız `*.egg-info/` eklendi.

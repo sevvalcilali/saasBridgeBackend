@@ -1,6 +1,6 @@
 # B0 — İskelet: teslim notu
 
-> 04.10.2026 · dal `b0-iskelet` · Durum: **kod bitti, bağımsız incelemeden geçti; Şevval'in onayı bekleniyor**
+> 04.10.2026 · dal `b0-iskelet` · Durum: **bitti — bağımsız incelemeden geçti, Şevval onayladı (04.10.2026)**
 
 ## Ne yapıldı
 
