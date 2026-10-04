@@ -148,6 +148,7 @@
 | Konum | **Ayrı repo** (`saasBridgeBackend`) | Arayüz reposuyla karışmasın; sözleşme belgesi arayüz reposunda kalır |
 | Donanım | **Yok → benzetimle başlanır** | Seri katman arayüz olarak bırakılır, B8'de tamamlanır |
 | Sözleşme | `SaasBridge/SUNUCUDAN_ISTENENLER.md` + brief §5.1 **değişmez** | Değişiklik gerekiyorsa üç yerde birlikte: sözleşme belgesi, `http/semalar.py`, `mock.js` |
+| Dal düzeni | **Her faz kendi dalında** (`b0-iskelet` gibi), faz sonunda PR; Şevval onaylayınca `main`'e birleşir (04.10.2026) | `main` hep onaylanmış hali gösterir; arayüz reposuna yazma her seferinde ayrı onayla |
 
 ### 3.2 Teknoloji yığını: Python 3.11+ (tek süreç, asyncio)
 | Katman | Seçim | Gerekçe |
@@ -493,9 +494,11 @@ commit'lerini alır, sonunda `docs/Bn_NOT.md` yazılır. Süreler tek kişi, tam
   - B0.3 ✅ `GercekSaat` ve yalnız `ilerlet()` ile ilerleyen `SahteSaat`.
   - B0.4 ✅ Ek olarak `dist/` dışına çıkan yollar 404; FastAPI `/docs` sayfaları kapalı (internet ister).
   - B0.5 ✅ Ctrl+C çıkış kodu 0; bozuk `config.toml` "ayar hatası" mesajıyla çıkar.
-  - B0.6 ✅ 33 test (ayar 8, saat 3, HTTP 20, başlatma 2); testler B0.4 kodundan önce yazıldı.
+  - B0.6 ✅ 70 test (ayar 27, saat 3, HTTP 33, başlatma 2, `baslat.sh` 5); testler koddan önce yazıldı.
   - B0.7 ✅ `baslat.sh` temiz kopyada denendi; `baslat.bat` Windows'ta **denenmedi** (B7 provasına kaldı).
-  - Kabul ✅ `pytest` 33/33; arayüz 390 / 768 / 1280'de açılıyor ve çökmüyor (`docs/B0_ekran_*.png`); `.js` →
+  - İnceleme ✅ Dal bağımsız incelemeden geçti: kritik bulgu yok, üç önemli bulgu bu dalda düzeltildi (statik yol
+    denetimi, `config.toml` tür denetimi, yarım kalmış `.venv`). Ertelenen küçük bulgular `docs/B0_NOT.md`'de.
+  - Kabul ✅ `pytest` 70/70; arayüz 390 / 768 / 1280'de açılıyor ve çökmüyor (`docs/B0_ekran_*.png`); `.js` →
     `text/javascript`; `/api/demo` 404. Ekrandaki metin "Veri bekleniyor…" değil "Sunucuya bağlanılamıyor, yeniden
     deneniyor…": `/events` henüz 404, B2'de düzelir.
 - **B0.1** `pyproject.toml` (paket adı `yakinlik`, Python ≥3.11), `requirements.txt` + `requirements-dev.txt`,
@@ -647,6 +650,8 @@ Hiçbiri B0–B2'yi engellemez; varsayılanlar bu belgededir. Soru 1–6'nın ta
 - [ ] B2.6 (`SUNUCU=` ile mock testlerini dış sunucuya koşturma) **SaasBridge reposunda** ayrı onayla yapılır.
 - [ ] SaasBridge reposunda eski bir `BACKEND_PLAN.md` kopyası duruyor ve o reponun `PLAN.md`'si ona bağlanıyor; silinmesi ya da
       bu dosyaya yönlendirilmesi SaasBridge reposunda ayrı onayla.
+- [ ] B0 incelemesinden ertelenen küçük işler (B2 öncesi: açılış satırı ve uçların kayıt sırası; B7: Windows provası,
+      `baslat.bat`, `wheelhouse/`): `docs/B0_NOT.md` → "Ertelenen küçük bulgular".
 
 ### 16.3 Plan ↔ kod çelişkileri (analiz 03.10.2026; karar bekliyor)
 Bu plan ile `SaasBridge` kodu (mock ve testleri) karşılaştırılınca çıkanlar. Hiçbiri henüz karara bağlanmadı; planın ilgili

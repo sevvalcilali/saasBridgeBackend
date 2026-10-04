@@ -18,7 +18,8 @@ Teknoloji: Python 3.11+, FastAPI + uvicorn, pyserial, SQLite (stdlib).
 Gereken: Python 3.11+. Arayüz reposu yan klasörde (`../SaasBridge`) ve derlenmiş olmalı (orada `npm run build`).
 
 ```bash
-./baslat.sh                  # .venv yoksa kurar, sunucuyu başlatır → http://localhost:8002 (Windows: baslat.bat)
+./baslat.sh                  # sanal ortam hazır değilse kurar, sunucuyu başlatır → http://localhost:8002
+                             # (Windows: baslat.bat — henüz Windows'ta denenmedi)
 ./baslat.sh --port 8010      # argümanlar sunucuya geçer: --port --kaynak --dist --veri --seri
 ```
 
