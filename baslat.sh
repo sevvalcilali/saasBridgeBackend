@@ -1,10 +1,17 @@
 #!/bin/sh
-# Tek komutla başlatma: .venv yoksa kurar, sunucuyu çalıştırır. Argümanlar sunucuya geçer:
+# Tek komutla başlatma: sanal ortam hazır değilse kurar, sunucuyu çalıştırır. Argümanlar sunucuya geçer:
 #   ./baslat.sh --port 8010
 set -e
 cd "$(dirname "$0")"
 
-if [ ! -d .venv ]; then
+# "Hazır" = bu makinede çalışan bir .venv var ve sunucunun paketleri içe aktarılabiliyor. Klasörün var
+# olması yetmez: yarıda kesilmiş kurulum ya da başka işletim sisteminden kopyalanmış .venv çalışmaz.
+hazir() {
+  [ -x .venv/bin/python ] && .venv/bin/python -c 'import fastapi, uvicorn, serial' >/dev/null 2>&1
+}
+
+if ! hazir; then
+  rm -rf .venv
   # Python 3.11+ gerekir; sistemdeki "python3" daha eski olabilir.
   PYTHON=""
   for aday in python3.11 python3.12 python3.13 python3; do
@@ -24,8 +31,8 @@ if [ ! -d .venv ]; then
   else
     KAYNAK=""
   fi
-  if ! .venv/bin/pip install $KAYNAK -r requirements.txt; then
-    rm -rf .venv  # yarım kurulum kalmasın; sonraki çalıştırma yeniden denesin
+  if ! .venv/bin/python -m pip install $KAYNAK -r requirements.txt; then
+    rm -rf .venv  # yarım kurulum kalmasın
     exit 1
   fi
 fi
