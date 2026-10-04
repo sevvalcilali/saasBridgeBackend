@@ -52,3 +52,32 @@ def istemci_ac():
 async def istemci(istemci_ac, dist):
     async with istemci_ac(uygulama_olustur(Ayar(dist=dist))) as acik:
         yield acik
+
+
+@pytest.fixture
+def bekleme_yok():
+    """Kaynaklara verilen sahte bekleme: istenen süreleri `.istenen` listesine yazar, hiç beklemez."""
+
+    async def bekle(saniye):
+        bekle.istenen.append(saniye)
+
+    bekle.istenen = []
+    return bekle
+
+
+@pytest.fixture
+def ilk_tikler():
+    """Bir kaynağın ilk `adet` tikini toplar; `adet` verilmezse kaynak bitene kadar."""
+
+    async def topla(kaynak, adet=None):
+        tikler, akis = [], kaynak.tikler()
+        try:
+            async for tik in akis:
+                tikler.append(tik)
+                if len(tikler) == adet:
+                    break
+        finally:
+            await akis.aclose()
+        return tikler
+
+    return topla
