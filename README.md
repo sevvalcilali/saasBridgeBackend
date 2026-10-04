@@ -10,4 +10,15 @@ Arayüzün (https://github.com/sevvalcilali/SaasBridge) gerçek sunucusu: alıc�
 
 **Durum (03.10.2026):** plan yazıldı, kod yok; B0 (iskelet) onay bekliyor.
 
-Teknoloji: Python 3.11+, FastAPI + uvicorn, pyserial, SQLite (stdlib). Çalıştırma ve kurulum B0 ile gelecek.
+Teknoloji: Python 3.11+, FastAPI + uvicorn, pyserial, SQLite (stdlib).
+
+## Kurulum ve çalıştırma
+
+Gereken: Python 3.11+. Arayüz reposu yan klasörde (`../SaasBridge`) ve derlenmiş olmalı (orada `npm run build`).
+
+```bash
+python3.11 -m venv .venv
+.venv/bin/pip install -r requirements-dev.txt   # yalnız çalıştırmak için: requirements.txt
+.venv/bin/python -m yakinlik                    # → http://localhost:8002 (ayarlar: config.toml; komut satırı ezer)
+.venv/bin/pytest
+```

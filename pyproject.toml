@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "yakinlik"
+description = "Yakınlık Takip Sistemi sunucusu"
+requires-python = ">=3.11"
+dynamic = ["version", "dependencies"]
+
+[tool.setuptools.packages.find]
+include = ["yakinlik*"]
+
+# Sürüm ve bağımlılıklar tek yerde: yakinlik/__init__.py ve requirements.txt.
+[tool.setuptools.dynamic]
+version = { attr = "yakinlik.__surum__" }
+dependencies = { file = ["requirements.txt"] }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "--import-mode=importlib"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
