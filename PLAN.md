@@ -14,9 +14,11 @@
 > Okuma sırası: **Bölüm 0 (kurallar)** → **Bölüm 8 (sözleşme)** → **Bölüm 14 (fazlar)**.
 > Diğer bölümler karar alırken ve uygularken başvurulacak ayrıntıdır.
 
-## ⏩ DEVİR NOTU (03.10.2026)
+## ⏩ DEVİR NOTU (04.10.2026)
 
-- **Durum:** Plan yazıldı, **kod yok**. B0 onay bekliyor.
+- **Durum:** B0 (iskelet) kodu yazıldı — `b0-iskelet` dalında, Şevval'in onayı bekleniyor (`docs/B0_NOT.md`). Sunucu
+  derlenmiş arayüzü ve `/api/health`'i veriyor; veri uçları yok. Sıradaki: B1 (ayrı onay).
+- **Çalıştırma:** `./baslat.sh` (ya da `.venv/bin/python -m yakinlik`) → `http://localhost:8002`; testler `.venv/bin/pytest`.
 - **Kardeş repo:** https://github.com/sevvalcilali/SaasBridge — arayüz, mock sunucu (`mock-server/mock.js`, davranışın çalışan
   şartnamesi), sözleşme belgesi (`SUNUCUDAN_ISTENENLER.md`), gereksinim belgesi (`UI_TASARIM_BRIEF.md` §2, §5, §9).
 - **Yerel düzen (öneri):** iki repo yan yana: `…/SaasBridge` ve `…/saasBridgeBackend`. Sunucu `../SaasBridge/dist`'i servis
@@ -482,7 +484,20 @@ commit'lerini alır, sonunda `docs/Bn_NOT.md` yazılır. Süreler tek kişi, tam
 **Geliştirme döngüsü:** `python -m yakinlik --kaynak benzetim --port 8002` (bu repo) + `SaasBridge` kökünde `npx vite`
 (Vite proxy'si zaten 8002'ye gider). Doğrulama sırası Bölüm 0.4.
 
-#### B0 ⬜ İskelet (tahmin: 1 gün)
+#### B0 🟡 İskelet (tahmin: 1 gün) — kod bitti (04.10.2026, dal `b0-iskelet`), onay bekliyor
+- **Yapıldı** (ayrıntı ve gerekçeler: `docs/B0_NOT.md`):
+  - B0.1 ✅ Sürüm `yakinlik/__init__.py`'de, bağımlılıklar `requirements.txt`'te tek yerde (pyproject oradan okur); paketler
+    kurulu sürüme sabitlendi. `.gitignore` zaten yeterliydi, yalnız `*.egg-info/` eklendi.
+  - B0.2 ✅ `host` da ayar oldu (varsayılan `0.0.0.0`, yalnız `config.toml`'dan); `veri` / `seri` varsayılanı boş; etkinlik
+    varsayılanları mock ile aynı; `config.toml`'da bilinmeyen anahtar hata verir.
+  - B0.3 ✅ `GercekSaat` ve yalnız `ilerlet()` ile ilerleyen `SahteSaat`.
+  - B0.4 ✅ Ek olarak `dist/` dışına çıkan yollar 404; FastAPI `/docs` sayfaları kapalı (internet ister).
+  - B0.5 ✅ Ctrl+C çıkış kodu 0; bozuk `config.toml` "ayar hatası" mesajıyla çıkar.
+  - B0.6 ✅ 33 test (ayar 8, saat 3, HTTP 20, başlatma 2); testler B0.4 kodundan önce yazıldı.
+  - B0.7 ✅ `baslat.sh` temiz kopyada denendi; `baslat.bat` Windows'ta **denenmedi** (B7 provasına kaldı).
+  - Kabul ✅ `pytest` 33/33; arayüz 390 / 768 / 1280'de açılıyor ve çökmüyor (`docs/B0_ekran_*.png`); `.js` →
+    `text/javascript`; `/api/demo` 404. Ekrandaki metin "Veri bekleniyor…" değil "Sunucuya bağlanılamıyor, yeniden
+    deneniyor…": `/events` henüz 404, B2'de düzelir.
 - **B0.1** `pyproject.toml` (paket adı `yakinlik`, Python ≥3.11), `requirements.txt` + `requirements-dev.txt`,
   `.gitignore` (`.venv/`, `veri/`, `__pycache__/`), `README.md` (kurulum + çalıştırma, 10 satır).
 - **B0.2** `yakinlik/ayar.py`: `config.toml` okuma (stdlib `tomllib`) + komut satırı (`--port --kaynak --dist --veri --seri`);
