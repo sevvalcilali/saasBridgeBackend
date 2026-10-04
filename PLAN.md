@@ -14,9 +14,11 @@
 > Okuma sırası: **Bölüm 0 (kurallar)** → **Bölüm 8 (sözleşme)** → **Bölüm 14 (fazlar)**.
 > Diğer bölümler karar alırken ve uygularken başvurulacak ayrıntıdır.
 
-## ⏩ DEVİR NOTU (03.10.2026)
+## ⏩ DEVİR NOTU (04.10.2026)
 
-- **Durum:** Plan yazıldı, **kod yok**. B0 onay bekliyor.
+- **Durum:** B0 (iskelet) bitti ve onaylandı (04.10.2026; teslim notu `docs/B0_NOT.md`). Sunucu
+  derlenmiş arayüzü ve `/api/health`'i veriyor; veri uçları yok. Sıradaki: B1 (ayrı onay; B1.3'ten önce Bölüm 16.3 madde 6 karara bağlanmalı).
+- **Çalıştırma:** `./baslat.sh` (ya da `.venv/bin/python -m yakinlik`) → `http://localhost:8002`; testler `.venv/bin/pytest`.
 - **Kardeş repo:** https://github.com/sevvalcilali/SaasBridge — arayüz, mock sunucu (`mock-server/mock.js`, davranışın çalışan
   şartnamesi), sözleşme belgesi (`SUNUCUDAN_ISTENENLER.md`), gereksinim belgesi (`UI_TASARIM_BRIEF.md` §2, §5, §9).
 - **Yerel düzen (öneri):** iki repo yan yana: `…/SaasBridge` ve `…/saasBridgeBackend`. Sunucu `../SaasBridge/dist`'i servis
@@ -146,6 +148,7 @@
 | Konum | **Ayrı repo** (`saasBridgeBackend`) | Arayüz reposuyla karışmasın; sözleşme belgesi arayüz reposunda kalır |
 | Donanım | **Yok → benzetimle başlanır** | Seri katman arayüz olarak bırakılır, B8'de tamamlanır |
 | Sözleşme | `SaasBridge/SUNUCUDAN_ISTENENLER.md` + brief §5.1 **değişmez** | Değişiklik gerekiyorsa üç yerde birlikte: sözleşme belgesi, `http/semalar.py`, `mock.js` |
+| Dal düzeni | **Her faz kendi dalında** (`b0-iskelet` gibi), faz sonunda PR; Şevval onaylayınca `main`'e birleşir (04.10.2026) | `main` hep onaylanmış hali gösterir; arayüz reposuna yazma her seferinde ayrı onayla |
 
 ### 3.2 Teknoloji yığını: Python 3.11+ (tek süreç, asyncio)
 | Katman | Seçim | Gerekçe |
@@ -473,7 +476,7 @@ CREATE TABLE ayar      (anahtar TEXT PRIMARY KEY, deger TEXT);               -- 
 
 Durum işaretleri: ⬜ onay bekliyor · 🟡 devam ediyor · ✅ bitti ve onaylandı
 
-### ⬜ Faz B — Gerçek sunucu (Python) (planlandı 03.10.2026, onay bekliyor)
+### 🟡 Faz B — Gerçek sunucu (Python) (planlandı 03.10.2026; B0 bitti 04.10.2026, sonraki fazlar ayrı onayla)
 
 **Amaç:** Arayüzün mock'tan aldığı her şeyi gerçek bir sunucudan, aynı sözleşmeyle vermek. Gerekçe, mimari, veri modeli ve
 kurallar Bölüm 1–13'te; **burası uygulama sırası ve kabul ölçütleridir.** Her B fazı ayrı onayla başlar (Bölüm 0.1), kendi
@@ -482,7 +485,22 @@ commit'lerini alır, sonunda `docs/Bn_NOT.md` yazılır. Süreler tek kişi, tam
 **Geliştirme döngüsü:** `python -m yakinlik --kaynak benzetim --port 8002` (bu repo) + `SaasBridge` kökünde `npx vite`
 (Vite proxy'si zaten 8002'ye gider). Doğrulama sırası Bölüm 0.4.
 
-#### B0 ⬜ İskelet (tahmin: 1 gün)
+#### B0 ✅ İskelet (tahmin: 1 gün) — bitti ve onaylandı (04.10.2026)
+- **Yapıldı** (ayrıntı ve gerekçeler: `docs/B0_NOT.md`):
+  - B0.1 ✅ Sürüm `yakinlik/__init__.py`'de, bağımlılıklar `requirements.txt`'te tek yerde (pyproject oradan okur); paketler
+    kurulu sürüme sabitlendi. `.gitignore` zaten yeterliydi, yalnız `*.egg-info/` eklendi.
+  - B0.2 ✅ `host` da ayar oldu (varsayılan `0.0.0.0`, yalnız `config.toml`'dan); `veri` / `seri` varsayılanı boş; etkinlik
+    varsayılanları mock ile aynı; `config.toml`'da bilinmeyen anahtar hata verir.
+  - B0.3 ✅ `GercekSaat` ve yalnız `ilerlet()` ile ilerleyen `SahteSaat`.
+  - B0.4 ✅ Ek olarak `dist/` dışına çıkan yollar 404; FastAPI `/docs` sayfaları kapalı (internet ister).
+  - B0.5 ✅ Ctrl+C çıkış kodu 0; bozuk `config.toml` "ayar hatası" mesajıyla çıkar.
+  - B0.6 ✅ 70 test (ayar 27, saat 3, HTTP 33, başlatma 2, `baslat.sh` 5); testler koddan önce yazıldı.
+  - B0.7 ✅ `baslat.sh` temiz kopyada denendi; `baslat.bat` Windows'ta **denenmedi** (B7 provasına kaldı).
+  - İnceleme ✅ Dal bağımsız incelemeden geçti: kritik bulgu yok, üç önemli bulgu bu dalda düzeltildi (statik yol
+    denetimi, `config.toml` tür denetimi, yarım kalmış `.venv`). Ertelenen küçük bulgular `docs/B0_NOT.md`'de.
+  - Kabul ✅ `pytest` 70/70; arayüz 390 / 768 / 1280'de açılıyor ve çökmüyor (`docs/B0_ekran_*.png`); `.js` →
+    `text/javascript`; `/api/demo` 404. Ekrandaki metin "Veri bekleniyor…" değil "Sunucuya bağlanılamıyor, yeniden
+    deneniyor…": `/events` henüz 404, B2'de düzelir.
 - **B0.1** `pyproject.toml` (paket adı `yakinlik`, Python ≥3.11), `requirements.txt` + `requirements-dev.txt`,
   `.gitignore` (`.venv/`, `veri/`, `__pycache__/`), `README.md` (kurulum + çalıştırma, 10 satır).
 - **B0.2** `yakinlik/ayar.py`: `config.toml` okuma (stdlib `tomllib`) + komut satırı (`--port --kaynak --dist --veri --seri`);
@@ -632,6 +650,8 @@ Hiçbiri B0–B2'yi engellemez; varsayılanlar bu belgededir. Soru 1–6'nın ta
 - [ ] B2.6 (`SUNUCU=` ile mock testlerini dış sunucuya koşturma) **SaasBridge reposunda** ayrı onayla yapılır.
 - [ ] SaasBridge reposunda eski bir `BACKEND_PLAN.md` kopyası duruyor ve o reponun `PLAN.md`'si ona bağlanıyor; silinmesi ya da
       bu dosyaya yönlendirilmesi SaasBridge reposunda ayrı onayla.
+- [ ] B0 incelemesinden ertelenen küçük işler (B2 öncesi: açılış satırı ve uçların kayıt sırası; B7: Windows provası,
+      `baslat.bat`, `wheelhouse/`): `docs/B0_NOT.md` → "Ertelenen küçük bulgular".
 
 ### 16.3 Plan ↔ kod çelişkileri (analiz 03.10.2026; karar bekliyor)
 Bu plan ile `SaasBridge` kodu (mock ve testleri) karşılaştırılınca çıkanlar. Hiçbiri henüz karara bağlanmadı; planın ilgili
