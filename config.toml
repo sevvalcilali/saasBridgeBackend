@@ -1,0 +1,15 @@
+# Yakınlık sunucusu ayarları. Komut satırı argümanları bunları ezer:
+#   python -m yakinlik --port 8010 --kaynak benzetim --dist ../SaasBridge/dist
+
+port = 8002
+host = "0.0.0.0"              # yalnız bu bilgisayardan erişim için "127.0.0.1"
+kaynak = "benzetim"           # benzetim | kayit | seri
+dist = "../SaasBridge/dist"   # derlenmiş arayüz (SaasBridge'de `npm run build`)
+esik = -72                    # dBm; varsayılan eşik
+# veri = "veri"               # veri yolu (B6'da kullanılacak)
+# seri = "/dev/ttyUSB0"       # alıcının seri aygıtı (B8'de kullanılacak)
+
+[etkinlik]
+ad = "Yatırımcı Buluşması"
+alt_baslik = "Yakınlık kartları · sahte veri"
+tarih = "28.09.2026 · Demo Salonu"
