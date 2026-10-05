@@ -7,7 +7,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 
 from ..cekirdek.cift import ESIK_ARALIGI
-from ..motor import Motor
+from ..motor import Motor, SifirlamaHatasi
 
 
 def _gecerli_esik(deger: object) -> bool:
@@ -48,7 +48,10 @@ def durum_uclari(motor: Motor) -> APIRouter:
         except ValueError:
             komut = None
         if isinstance(komut, dict) and komut.get("cmd") == "reset":
-            motor.sifirla()
+            try:
+                motor.sifirla()
+            except SifirlamaHatasi as hata:
+                return JSONResponse({"ok": False, "hata": str(hata)}, status_code=500)
             return JSONResponse({"ok": True})
         if isinstance(komut, dict) and komut.get("cmd") == "threshold" and _gecerli_esik(komut.get("value")):
             motor.esik_ayarla(komut["value"])

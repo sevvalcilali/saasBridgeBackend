@@ -3,6 +3,9 @@ aynı baytlar.
 
 Alan durumunu yalnız burası değiştirir (İ3). Tik işleme hiç `await` içermez: HTTP işleyicilerinin çağırdığı komutlar
 (eşik, sıfırla) aynı olay döngüsünde iki tik arasında uygulanır, yarış olmaz.
+
+Kalıcılık (B6): her tikten ve her masa işleminden sonra değişenler diske yazılır; yazılamazsa veri bellekte kalır,
+sıradaki yazımda yeniden denenir.
 """
 import asyncio
 import json
@@ -10,12 +13,14 @@ import logging
 from collections.abc import Awaitable, Callable, Mapping
 from contextlib import aclosing
 
-from .ayar import Ayar
+from .ayar import Ayar, veri_klasoru
 from .cekirdek import atama
 from .cekirdek.alan import Alan
 from .cekirdek.csv_ice import AktarmaSonucu, iceri_aktar
 from .cekirdek.durum import Etkinlik, atamalar_sozluk, durum_uret, kartlar_uret, oturumlar_sozluk
 from .cekirdek.kisi import Kisi, KisiDefteri
+from .depo.sqlite import Depo
+from .giris.benzetim import Benzetim
 from .giris.kaynak import TIK_SN, PaketKaynagi, Tik
 from .giris.olustur import kaynak_olustur
 from .saat import GercekSaat, Saat
@@ -23,6 +28,10 @@ from .saat import GercekSaat, Saat
 gunluk = logging.getLogger(__name__)
 
 EN_COK_BEKLEYEN = 5  # bu kadar mesaj birikirse izleyici yetişemiyor sayılır, bağlantısı kapatılır (yeniden bağlanır)
+
+
+class SifirlamaHatasi(Exception):
+    """Sıfırlama yapılmadı (önce alınması gereken yedek alınamadı); veri olduğu gibi duruyor."""
 
 
 class Abone:
@@ -67,24 +76,48 @@ class Motor:
         etkinlik: Etkinlik,
         saat: Saat | None = None,
         bekle: Callable[[float], Awaitable[None]] = asyncio.sleep,
+        depo: Depo | None = None,
     ) -> None:
         self._kaynak = kaynak
         self._alan = alan
         self._etkinlik = etkinlik
         self._saat = saat or GercekSaat()
         self._bekle = bekle
+        self._depo = depo
+        self._yazilamiyor = False
         self._aboneler: set[Abone] = set()
         self.anlik = self._uret()  # son durum, JSON baytları (GET /state bunu verir)
+        self._kaydet()  # yeni dosyada başlangıç kadrosu, yüklenen dosyada kapatılan görüşmeler hemen diske
 
     @classmethod
-    def ayardan(cls, ayar: Ayar, bekle: Callable[[float], Awaitable[None]] = asyncio.sleep) -> "Motor":
-        """Ayarlardan kaynak, kayıt defteri ve alanı kurar. Kaynak kurulamıyorsa ValueError (sunucu açılmadan)."""
+    def ayardan(
+        cls, ayar: Ayar, bekle: Callable[[float], Awaitable[None]] = asyncio.sleep, saat: Saat | None = None
+    ) -> "Motor":
+        """Ayarlardan kaynak, kalıcı veri, kayıt defteri ve alanı kurar. Kurulamıyorsa ValueError (sunucu açılmadan)."""
+        saat = saat or GercekSaat()
         kaynak = kaynak_olustur(ayar, bekle=bekle)
         benzetim = kaynak.benzetim
-        # Benzetimde kayıt defteri sahte kadrodan kurulur (16.3 madde 6 kararı); diğer kaynaklarda boş (B3'te dolar).
-        defter = KisiDefteri.kadrodan(benzetim.kadro) if benzetim else KisiDefteri()
-        alan = Alan(defter, esik=ayar.esik, anlasma_sn=ayar.anlasma_sn, baslangic=benzetim.sim_sn if benzetim else None)
-        return cls(kaynak, alan, Etkinlik(ayar.etkinlik_adi, ayar.alt_baslik, ayar.tarih), bekle=bekle)
+        klasor = veri_klasoru(ayar)
+        if ayar.yeni_etkinlik and klasor is None:
+            raise ValueError("--yeni-etkinlik yalnız kalıcı veriyle kullanılır (--veri klasör ya da --kaynak seri)")
+        depo = None if klasor is None else Depo.ac(klasor, saat.simdi(), yeni_etkinlik=ayar.yeni_etkinlik)
+        try:
+            kalici = None if depo is None else depo.yukle(saat.simdi())
+            baslangic = benzetim.sim_sn if benzetim else None
+            if kalici is not None:
+                alan = kalici.alan(anlasma_sn=ayar.anlasma_sn, baslangic=baslangic)  # eşik de diskten (kalıcı)
+                if benzetim:
+                    _benzetimi_esitle(benzetim, alan.defter)
+            else:
+                # Benzetimde kayıt defteri sahte kadrodan kurulur (16.3 madde 6 kararı); diğer kaynaklarda boş başlar.
+                defter = KisiDefteri.kadrodan(benzetim.kadro) if benzetim else KisiDefteri()
+                alan = Alan(defter, esik=ayar.esik, anlasma_sn=ayar.anlasma_sn, baslangic=baslangic)
+            etkinlik = Etkinlik(ayar.etkinlik_adi, ayar.alt_baslik, ayar.tarih)
+            return cls(kaynak, alan, etkinlik, saat=saat, bekle=bekle, depo=depo)
+        except BaseException:
+            if depo is not None:
+                depo.kapat()
+            raise
 
     async def calis(self) -> None:
         """Kaynağın tiklerini işler. Kaynak biterse ya da hata verirse yayın boş tiklerle sürer (İ6): zaman ve
@@ -107,6 +140,7 @@ class Motor:
             self._alan.tik(tik, self._saat.simdi())
         except Exception:
             gunluk.exception("tik işlenemedi (t=%s); yayın sürüyor", tik.t)
+        self._kaydet()
         self._yayinla()
 
     # --- karşılama masası (B3): kayıt defteri ve kart hareketleri; değişiklik /state'te hemen görünür ---
@@ -117,11 +151,14 @@ class Motor:
 
     def kisi_ekle(self, alanlar: Mapping[str, object]) -> Kisi:
         """Kartsız yeni kişi (panoda görünmez, durum değişmez)."""
-        return self.defter.ekle(ad=alanlar.get("ad"), rol=alanlar.get("rol"), kurum=alanlar.get("kurum"),
+        kisi = self.defter.ekle(ad=alanlar.get("ad"), rol=alanlar.get("rol"), kurum=alanlar.get("kurum"),
                                 yildiz=alanlar.get("yildiz"), notu=alanlar.get("not"))
+        self._kaydet()
+        return kisi
 
     def kisi_guncelle(self, kisi_id: str, alanlar: Mapping[str, object]) -> Kisi | None:
         kisi = self.defter.guncelle(kisi_id, alanlar)
+        self._kaydet()
         if kisi is not None and kisi.atanan_kart is not None:
             self._guncelle()  # kartı varsa panodaki adı / rolü hemen değişsin
         return kisi
@@ -134,21 +171,26 @@ class Motor:
         if kisi.atanan_kart is not None:
             self.iade(kisi.atanan_kart, ayrildi=True)
         self.defter.sil(kisi_id)
+        self._kaydet()
         return True
 
     def iceri_aktar(self, metin: str) -> AktarmaSonucu:
-        return iceri_aktar(self.defter, metin)
+        sonuc = iceri_aktar(self.defter, metin)
+        self._kaydet()
+        return sonuc
 
     def ata(self, kisi_id: str, kart: str) -> bool:
         """Kartı kişiye verir; kişi yoksa False."""
         if self.defter.kisi(kisi_id) is None:
             return False
         self._benzetime_bildir(atama.ata(self._alan, kisi_id, kart, self._saat.simdi()))
+        self._kaydet()
         self._guncelle()
         return True
 
     def iade(self, kart: str, ayrildi: bool) -> None:
         self._benzetime_bildir(atama.iade(self._alan, kart, ayrildi, self._saat.simdi()))
+        self._kaydet()
         self._guncelle()
 
     def oturumlar(self) -> list[dict]:
@@ -179,11 +221,38 @@ class Motor:
 
     def esik_ayarla(self, dbm: float) -> None:
         self._alan.esik = dbm
+        self._kaydet()  # eşik kalıcı (brief §5)
         self._guncelle()  # GET /state hemen yeni eşiği görsün; izleyicilere sıradaki tikte gider
 
     def sifirla(self) -> None:
+        """Süreler, görüşmeler, bildirimler, atama geçmişi silinir; kişiler, açık atamalar, eşik kalır (Soru 8).
+        Kalıcı veride önce belleğin son hali yazılır ve yedeği alınır; ikisinden biri olmazsa hiçbir şey silinmez."""
+        if self._depo is not None:
+            simdi = self._saat.simdi()
+            try:
+                self._depo.yaz(self._alan, simdi)
+                yedek = self._depo.yedekle("sifirlama", simdi)
+            except Exception as hata:
+                gunluk.exception("sıfırlama öncesi yedek alınamadı; sıfırlanmadı")
+                raise SifirlamaHatasi(f"sıfırlanmadı: yedek alınamadı ({hata})") from hata
+            gunluk.warning("sıfırlandı; önceki veri: %s", yedek)
         self._alan.sifirla()
         self._guncelle()
+        if self._depo is not None:
+            try:
+                self._depo.yaz(self._alan, self._saat.simdi())
+            except Exception as hata:
+                # Masa bilmeli: diskte eski etkinlik duruyor, yazılana dek yeniden başlatmada geri gelir.
+                self._yazilamiyor = True
+                gunluk.exception("sıfırlandı ama diske yazılamadı; her tikte yeniden denenecek")
+                raise SifirlamaHatasi(f"sıfırlandı ama diske yazılamadı ({hata}); düzelince yazılacak") from hata
+
+    def kapat(self) -> None:
+        """Sunucu kapanırken: son hal diske yazılır, veri dosyası bırakılır."""
+        if self._depo is not None:
+            self._kaydet()
+            self._depo.kapat()
+            self._depo = None
 
     def abone_ol(self) -> Abone:
         abone = Abone()
@@ -192,6 +261,22 @@ class Motor:
 
     def ayril(self, abone: Abone) -> None:
         self._aboneler.discard(abone)
+
+    def _kaydet(self) -> None:
+        """Değişenleri diske yazar. Yazılamazsa veri bellekte kalır, sıradaki çağrıda yeniden denenir; günlüğe her
+        tikte değil, bozulunca ve düzelince bir kez yazılır."""
+        if self._depo is None:
+            return
+        try:
+            self._depo.yaz(self._alan, self._saat.simdi())
+        except Exception:
+            if not self._yazilamiyor:
+                gunluk.exception("veri diske yazılamadı; bellekte duruyor, her tikte yeniden denenecek")
+            self._yazilamiyor = True
+        else:
+            if self._yazilamiyor:
+                gunluk.warning("veri yeniden diske yazılabiliyor")
+            self._yazilamiyor = False
 
     def _uret(self) -> bytes:
         durum = durum_uret(self._alan, self._etkinlik, self._saat.simdi())
@@ -211,3 +296,14 @@ class Motor:
                 gunluk.warning("canlı akış izleyicisi yetişemiyor; bağlantısı kapatıldı")
                 abone.kapat()
                 self._aboneler.discard(abone)
+
+
+def _benzetimi_esitle(benzetim: Benzetim, defter: KisiDefteri) -> None:
+    """Kalıcı veriyle açılan benzetimde salon kayıt defterine uyar: kişide olan kartlar salonda (rolüyle), kadronun
+    kimsede olmayan kartları masada (16.3 madde 6)."""
+    atanan = {kisi.atanan_kart: kisi.rol for kisi in defter.kisiler() if kisi.atanan_kart is not None}
+    for sahte in benzetim.kadro:
+        if sahte.kart not in atanan:
+            benzetim.kart_al(sahte.kart, masaya=True)
+    for kart, rol in atanan.items():
+        benzetim.kart_ver(kart, rol)

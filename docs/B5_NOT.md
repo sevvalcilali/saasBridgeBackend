@@ -1,6 +1,6 @@
 # B5 — Görüşme kayıtları, atama geçmişi, bildirim kimlikleri: teslim notu
 
-> 05.10.2026 · dal `b5-gorusme-rapor` · Durum: **bitti; Şevval'in onayı bekleniyor** (bağımsız inceleme B6 ile birlikte)
+> 05.10.2026 · dal `b5-gorusme-rapor` · Durum: **bitti — Şevval onayladı (05.10.2026)** (bağımsız inceleme B6 ile birlikte)
 
 - `GET /api/sessions`: görüşme kayıtları `{a, b, start, end}` — kişi kimliği (kişisiz kart `"kart:N"`), etkinlik saniyesi,
   sürüyorsa `end: null`. Kayıt eşiğin aşıldığı ana geri tarihli açılır (bekleme dakikası sayılır): çift başına kayıt

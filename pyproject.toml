@@ -11,6 +11,9 @@ dynamic = ["version", "dependencies"]
 [tool.setuptools.packages.find]
 include = ["yakinlik*"]
 
+[tool.setuptools.package-data]
+"yakinlik.depo" = ["*.sql"]
+
 # Sürüm ve bağımlılıklar tek yerde: yakinlik/__init__.py ve requirements.txt.
 [tool.setuptools.dynamic]
 version = { attr = "yakinlik.__surum__" }

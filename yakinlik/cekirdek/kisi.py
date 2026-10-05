@@ -84,6 +84,22 @@ class KisiDefteri:
             defter.ata(kisi.kisi_id, sahte.kart)
         return defter
 
+    @classmethod
+    def geri_yukle(cls, kisiler: Iterable[Kisi], sayac: int) -> "KisiDefteri":
+        """Kalıcı kayıttan defter: kişiler eklenme sırasıyla, kartlarıyla. `sayac` silinenler dahil doğan kişi sayısı
+        (kimlik ve renk sırası kaldığı yerden sürer; silinen kişinin kimliği yeniden kullanılmaz)."""
+        defter = cls()
+        for kisi in kisiler:
+            defter._kisiler[kisi.kisi_id] = kisi
+            if kisi.atanan_kart is not None:
+                defter._kartlar[kisi.atanan_kart] = kisi.kisi_id
+        defter._sayac = sayac
+        return defter
+
+    @property
+    def sayac(self) -> int:
+        return self._sayac
+
     def kisiler(self) -> list[Kisi]:
         return list(self._kisiler.values())
 
