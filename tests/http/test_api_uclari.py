@@ -233,3 +233,12 @@ async def test_kart_listesi_atamayi_hemen_gosterir(istemci):
     kartlar = {k["kart"]: k for k in (await istemci.get("/api/cards")).json()}
 
     assert (kartlar["14"]["atanan"], kartlar["2"]["atanan"]) == (kisi["kisiId"], None)  # iade edilen kart boşta
+
+
+async def test_bes_dakikadir_duyulmayan_bos_kart_listeden_duser_atanmis_kart_kalir(istemci, motor):
+    motor.isle(tik_uret(301.0, sessiz={"3", "14"}))  # kart 3 (atanmış) ve 14 (boş) 5 dk'dır duyulmuyor
+
+    kartlar = {k["kart"]: k for k in (await istemci.get("/api/cards")).json()}
+
+    assert "14" not in kartlar  # kapanmış / kaybolmuş boş kart kart sağlığını kirletmesin
+    assert kartlar["3"]["seenAgo"] == 300.5  # atanmış kart kalır: kayıp kart uyarısı bunu kullanır

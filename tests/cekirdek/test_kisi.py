@@ -82,3 +82,7 @@ def test_silinen_kisi_listede_ve_kartta_yok(defter):
     assert [k.kisi_id for k in defter.kisiler()] == ["k2", "k3", "k4"]
     sonraki = defter.ekle(ad="Sonraki", rol="guest")
     assert (sonraki.kisi_id, sonraki.renk) == ("k5", PALET[4])  # kimlik ve renk sırası silinenle kaymaz
+
+
+def test_asiri_buyuk_yildiz_hata_vermez(defter):
+    assert defter.ekle(ad="Büyük", rol="investor", yildiz=10**400).yildiz == 0  # JS "| 0" gibi

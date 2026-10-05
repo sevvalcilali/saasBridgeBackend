@@ -43,6 +43,7 @@ def ata(alan: Alan, kisi_id: str, kart: str, duvar: float) -> KartHareketi:
     eski_sahip = defter.birak(kart)
     if eski_sahip is not None:
         alan.kart_ayril(kart)
+        alan.sayaclari_sifirla(eski_sahip.kisi_id)
         cikan.append((kart, False))  # benzetimde kart salondan çıkıp yeni sahibiyle girer: eşleşmeleri sıfırlanır
         alan.atama_gecmisi.append(AtamaKaydi(duvar, eski_sahip.kisi_id, kart, IADE))
     islem = ATA
@@ -64,6 +65,9 @@ def iade(alan: Alan, kart: str, ayrildi: bool, duvar: float) -> KartHareketi:
     kisi = alan.defter.birak(kart)
     if kisi is not None:
         kisi.ayrildi = ayrildi
+        alan.sayaclari_sifirla(kisi.kisi_id)
         alan.atama_gecmisi.append(AtamaKaydi(duvar, kisi.kisi_id, kart, IADE if ayrildi else GERI_AL))
+    else:
+        alan.kimligi_emekli_et(f"kart:{kart}")  # kişisiz kartın süreleri kartın sonraki sahibine geçmesin
     alan.kart_ayril(kart)
     return KartHareketi(giren=(), cikan=((kart, True),))

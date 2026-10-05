@@ -631,7 +631,8 @@ commit'lerini alır, sonunda `docs/Bn_NOT.md` yazılır. Süreler tek kişi, tam
 
 #### B4 🟡 Kartlar — `GET /api/cards` (tahmin: 1–2 gün) — kod bitti (05.10.2026, dal `b4-kartlar`), onay bekliyor
 - **Yapıldı** (`docs/B4_NOT.md`): `/api/cards` (duyulan bütün kartlar; en yeni paketten pil ve alıcı gücü); paketlere
-  `alici_rssi` (eski izler uyumlu). `pytest` 359/359. Tarayıcı doğrulaması B5 ile.
+  `alici_rssi` (eski izler uyumlu). B3+B4 bağımsız incelemesi: kritik yok; iade edilen kişisiz kartın süresinin sonraki
+  sahibe geçmesi ve dört küçük bulgu düzeltildi. `pytest` 364/364. Tarayıcı doğrulaması B5 ile.
 - Alıcının duyduğu tüm kartlar (atanmış, yedek, iade dönmüş, 100+), `rssiAlici`, `seenAgo`, `pil`, `atanan`; benzetimde
   yedekler masada −80 civarı, "yaklaştır" senaryosu **yok** (mock'un `/api/yaklastir`'ı demo; gerçek kart yaklaştırılır).
   Yedek kartlar `people`'a **girmez** (Soru 1 varsayılanı: yalnız bir görüşmeye girince eklenir).

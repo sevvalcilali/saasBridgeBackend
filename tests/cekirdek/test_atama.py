@@ -189,3 +189,39 @@ def test_sifirlama_atama_gecmisini_siler_atamalari_tutar():
 
     assert salon.alan.atama_gecmisi == []
     assert salon.alan.defter.kart_sahibi("40") is yeni
+
+
+# --- B3+B4 incelemesi ---
+
+def test_kimsesiz_kart_iade_edilince_panodan_duser_sureleri_sonraki_sahibe_gecmez():
+    salon = Salon(anlasma_sn=60).gecir(180.0, {("2", "14"): YAKIN})  # Kart 14 Ayşe'yle görüştü, anlaşma da çıktı
+
+    iade(salon.alan, "14", ayrildi=True, duvar=salon.duvar)
+    panoda = "14" in salon.alan.sahnedeki_kartlar()
+    yeni = salon.alan.defter.ekle(ad="Sonraki Sahip", rol="founder")
+    ata(salon.alan, yeni.kisi_id, "14", salon.duvar)
+
+    assert not panoda
+    assert yeni.kisi_id not in salon.alan.kenarlar.sure  # bilinmeyen eski taşıyıcının süresi devredilmez
+    assert all(yeni.kisi_id not in cift for cift in salon.alan.anlasmalar)
+    assert salon.alan.kenarlar.sure["k1"] == pytest.approx(3.0)  # Ayşe'nin süresi silinmez
+
+
+def test_kartini_iade_eden_kisinin_bosta_sayaci_sifirlanir():
+    salon = Salon().gecir(350.0)  # Ayşe (★★★) 350 sn yalnız
+    iade(salon.alan, "2", ayrildi=True, duvar=salon.duvar)
+    salon.gecir(600.0)
+    ata(salon.alan, "k1", "40", salon.duvar)
+
+    salon.gecir(15.0, kartlar=(*FAZLA_KART,))
+
+    assert "idle_investor" not in turler(salon.alan)
+    assert salon.alan.bosta_sn("40") == 15.0
+
+
+def test_anlasma_yaptigi_kimsesiz_karti_alan_kiside_kendiyle_anlasma_olmaz():
+    salon = Salon(anlasma_sn=60).gecir(60.0, {("2", "14"): YAKIN})
+
+    ata(salon.alan, "k1", "14", salon.duvar)
+
+    assert all(x != y for x, y in salon.alan.anlasmalar)

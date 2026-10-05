@@ -27,13 +27,19 @@ def js_yuvarla(deger: float, basamak: int = 0) -> float:
     return math.floor(deger * carpan + 0.5) / carpan
 
 
+BOS_KART_UNUTMA_SN = 300  # bu kadar duyulmayan boş kart listeden düşer (kapandı ya da salondan çıktı)
+
+
 def kartlar_uret(alan: Alan) -> list[dict]:
-    """GET /api/cards: alıcının duyduğu bütün kartlar (atanmış, masadaki yedek, iade dönmüş, dinleyici), numara sırasıyla.
+    """GET /api/cards: alıcının duyduğu kartlar (atanmış, masadaki yedek, iade dönmüş, dinleyici), numara sırasıyla.
+    Atanmış kart duyulmasa da kalır (kayıp kart uyarısı); boş kart 5 dk duyulmazsa düşer (kart sağlığı kirlenmesin).
     Masa 1–3 sn'de bir yoklar; ucuz olmalı."""
     sonuc = []
     for kart in sorted(alan.sinyal.duyulan_kartlar(), key=lambda k: (not k.isdecimal(), int(k) if k.isdecimal() else 0, k)):
         yas, pil, alici_rssi = alan.sinyal.kart_bilgisi(kart, alan.t)
         sahip = alan.defter.kart_sahibi(kart)
+        if sahip is None and yas > BOS_KART_UNUTMA_SN:
+            continue
         sonuc.append({
             "kart": kart,
             "rssiAlici": None if alici_rssi is None else js_yuvarla(alici_rssi, 1),
