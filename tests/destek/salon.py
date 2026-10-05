@@ -49,9 +49,9 @@ class Salon:
     def duvar(self):
         return DUVAR + self.t
 
-    def gecir(self, saniye, ciftler=None, sessiz=(), alici_kopuk=False):
+    def gecir(self, saniye, ciftler=None, sessiz=(), alici_kopuk=False, kartlar=KARTLAR):
         for _ in range(round(saniye / DT)):
             self.t += DT
-            tik = Tik(self.t, ()) if alici_kopuk else tik_uret(self.t, ciftler, sessiz)
+            tik = Tik(self.t, ()) if alici_kopuk else tik_uret(self.t, ciftler, sessiz, kartlar)
             self.alan.tik(tik, self.duvar)
         return self

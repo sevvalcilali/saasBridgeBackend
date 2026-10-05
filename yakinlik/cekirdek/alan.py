@@ -41,6 +41,7 @@ class Alan:
         self._yalniz_bildirildi: set[str] = set()  # kimlik
         self._kayip_bildirildi: set[str] = set()  # kart
         self._sessiz: dict[str, float] = {}  # kart → alıcı canlıyken kesintisiz duyulmadığı saniye
+        self.atama_gecmisi: list = []  # AtamaKaydi (cekirdek/atama.py); sıfırlamada silinir
 
     @property
     def gecen_sn(self) -> float:
@@ -70,6 +71,27 @@ class Alan:
         """Alıcıdan son ALICI_KOPUK_SN içinde paket geldi mi?"""
         yas = None if self.t is None else self.sinyal.alici_yasi(self.t)
         return yas is not None and yas <= ALICI_KOPUK_SN
+
+    def kart_ayril(self, kart: str) -> None:
+        """Kart el değiştirdi ya da masaya döndü: açık görüşmeleri kapanır (biten sayılır), eşleri serbest kalır.
+
+        Süreler ve kenarlar silinmez; kartın sinyal ölçümleri de kalır (kart açık durmaya devam ediyor).
+        """
+        for anahtar in [anahtar for anahtar in self._ciftler if kart in anahtar.split("-")]:
+            if self._ciftler.pop(anahtar).birlikte:
+                self.biten += 1
+        self._sessiz.pop(kart, None)
+        self._kayip_bildirildi.discard(kart)
+
+    def kimligi_tasi(self, eski: str, yeni: str) -> None:
+        """`eski` kimliğe yazılmış süreler, anlaşmalar ve sayaçlar `yeni` kimliğe geçer ("kart:N" → kisiId)."""
+        self.kenarlar.tasi(eski, yeni)
+        self.anlasmalar = {kimlik_cifti(*(yeni if kimlik == eski else kimlik for kimlik in cift)) for cift in self.anlasmalar}
+        if eski in self._bosta:
+            self._bosta[yeni] = self._bosta.pop(eski)
+        if eski in self._yalniz_bildirildi:
+            self._yalniz_bildirildi.discard(eski)
+            self._yalniz_bildirildi.add(yeni)
 
     def kisi(self, kart: str) -> Kisi:
         return self.defter.kart_sahibi(kart) or kisisiz_kart(kart)
