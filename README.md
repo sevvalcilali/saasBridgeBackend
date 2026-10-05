@@ -15,6 +15,7 @@ Arayüzün (https://github.com/sevvalcilali/SaasBridge) gerçek sunucusu: alıc�
   alıyor (`docs/B2_NOT.md`).
 - B3 (karşılama masası: kişiler, CSV, kart verme / iade / değişim) bitti ve onaylandı (`docs/B3_NOT.md`). Kart listesi
   (`/api/cards`) B4'te geldi (`docs/B4_NOT.md`); görüşme kayıtları, atama geçmişi ve rapor B5'te (`docs/B5_NOT.md`).
+- B6 (kalıcılık + sıfırlama): veri SQLite'ta, sunucu yeniden açılınca kaldığı yerden sürer (`docs/B6_NOT.md`).
 - Donanım (kartlar + alıcı) var ve test edildi; gerçek alıcıya bağlama B8'de.
 
 Teknoloji: Python 3.11+, FastAPI + uvicorn, pyserial, SQLite (stdlib).
@@ -28,6 +29,14 @@ Gereken: Python 3.11+. Arayüz reposu yan klasörde (`../SaasBridge`) ve derlenm
                              # (Windows: baslat.bat — henüz Windows'ta denenmedi)
 ./baslat.sh --port 8010      # argümanlar sunucuya geçer: --port --kaynak --dist --veri --seri
 ./baslat.sh --hizlandir 10   # benzetim: --kisi 40 --hizlandir 10 --kopma 0 --anlasma-sn 30; kayıt: --kaydet iz.jsonl / --kaynak kayit --iz iz.jsonl
+```
+
+**Veri ve yedekler.** Gerçek alıcıyla (`--kaynak seri`) her şey `veri/yakinlik.sqlite` dosyasına yazılır: kişiler, kartlar,
+görüşmeler, bildirimler, eşik. Sunucu kapanıp açılınca kaldığı yerden sürer (gece yarısını geçse de). Her açılışta ve her
+"Sıfırla"dan önce `veri/yedek/` altına kopya alınır. Benzetim varsayılan olarak hiçbir şey saklamaz; denemek için `--veri veri`.
+
+```bash
+./baslat.sh --yeni-etkinlik  # yeni etkinlik: eski veri veri/yedek/ altına taşınır, sunucu boş başlar
 ```
 
 Elle kurulum ve testler:

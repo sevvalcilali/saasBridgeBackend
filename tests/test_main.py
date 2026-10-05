@@ -162,3 +162,37 @@ def test_hatali_kaynak_ayari_sunucu_acilmadan_anlasilir_hatayla_durur(tmp_path):
     assert sonuc.returncode != 0
     assert "ayar hatası" in sonuc.stderr and "--iz" in sonuc.stderr
     assert "Traceback" not in sonuc.stderr
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="SIGKILL yalnız POSIX'te")
+def test_kill_9_ile_olen_sunucu_acilinca_kisiler_kayitlar_kenarlar_ve_esik_korunur(tmp_path):
+    # B6 kabulü: süreç kill -9 ile ölür (kapanış kodu çalışmaz), yeniden açılır; diske yazılmış olan aynı kalır.
+    def iste(adres, yol):
+        return httpx.get(f"{adres}{yol}", timeout=5, trust_env=False).json()
+
+    with sunucu(tmp_path, "--veri", "veri", "--hizlandir", "60", "--kopma", "0") as (port, surec):
+        adres = f"http://127.0.0.1:{port}"
+        httpx.post(f"{adres}/control", content=b'{"cmd":"threshold","value":-75}', trust_env=False)
+        httpx.post(f"{adres}/api/people", json={"ad": "Deniz", "rol": "investor"}, trust_env=False)
+        son = time.monotonic() + 20
+        while len(iste(adres, "/state")["edges"]) < 3 and time.monotonic() < son:
+            time.sleep(0.2)
+        once = {yol: iste(adres, yol) for yol in ("/api/people", "/api/sessions", "/state")}
+        surec.send_signal(signal.SIGKILL)
+        surec.wait(timeout=5)
+
+    with sunucu(tmp_path, "--veri", "veri", "--hizlandir", "60", "--kopma", "0") as (port, _):
+        sonra = {yol: iste(f"http://127.0.0.1:{port}", yol) for yol in ("/api/people", "/api/sessions", "/state")}
+
+    assert sonra["/api/people"] == once["/api/people"] and len(once["/api/people"]) == 26
+    assert sonra["/state"]["threshold"] == -75
+    kayitlar = {(o["a"], o["b"], o["start"]): o["end"] for o in sonra["/api/sessions"]}
+    for o in once["/api/sessions"]:  # ölmeden önce okunan her kayıt duruyor; o an sürenler kapanmış
+        assert (o["a"], o["b"], o["start"]) in kayitlar
+        assert o["end"] is None or kayitlar[(o["a"], o["b"], o["start"])] == o["end"]
+    kenarlar = {(k["a"], k["b"]): k["min"] for k in sonra["/state"]["edges"]}
+    assert len(once["/state"]["edges"]) >= 3
+    for k in once["/state"]["edges"]:  # ölene dek süre ancak artmış olabilir
+        assert kenarlar[(k["a"], k["b"])] >= k["min"]
+    assert sonra["/state"]["elapsed"] >= once["/state"]["elapsed"]
+    assert list((tmp_path / "veri" / "yedek").glob("yakinlik-acilis-*.sqlite"))  # açılışta yedek alındı

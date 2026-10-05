@@ -22,14 +22,18 @@ class Alan:
         esik: float = -72.0,
         anlasma_sn: float | None = None,
         baslangic: float | None = None,
+        gecen: float = 0.0,
     ) -> None:
-        """`baslangic`: kaynak saatinin etkinlik başındaki değeri (benzetimde 0); bilinmiyorsa ilk tik başlangıç olur."""
+        """`baslangic`: kaynak saatinin şimdiki değeri (benzetimde 0); bilinmiyorsa ilk tik alınır. `gecen`: etkinlik
+        saatinin o andaki değeri (yeniden başlatmada kaldığı yerden sürer, PLAN Bölüm 6)."""
         self.defter = defter
         self.esik = esik
         self.anlasma_sn = anlasma_sn  # verilirse anlaşma bu sürede düşer, rol aranmaz (rules.dealAfterS)
         self.sinyal = SinyalDeposu()
         self.t = baslangic  # son tikin anı (kaynak saati)
-        self._baz = baslangic  # etkinlik saatinin başladığı an (sıfırlamada yenilenir)
+        self._ilk_gecen = gecen
+        # Etkinlik saatinin sıfır anı, kaynak saatinde (sıfırlamada yenilenir); ilk tikte belli olabilir.
+        self._baz = None if baslangic is None else baslangic - gecen
         self._durumu_temizle()
 
     def _durumu_temizle(self) -> None:
@@ -45,21 +49,22 @@ class Alan:
         self.atama_gecmisi: list = []  # AtamaKaydi (cekirdek/atama.py); sıfırlamada silinir
         self.oturumlar: list = []  # Oturum (cekirdek/oturum.py): görüşme kayıtları; sıfırlamada silinir
         self._acik_oturum: dict = {}  # çift anahtarı → açık Oturum
-        self._emekli_sayac = 0  # iade edilen kişisiz kartların eski kimlikleri için sıra no
+        self.emekli_sayac = 0  # iade edilen kişisiz kartların eski kimlikleri için sıra no
 
     @property
     def gecen_sn(self) -> float:
         """Etkinlik saati (`elapsed`): son sıfırlamadan bu yana geçen kaynak saniyesi."""
-        return 0.0 if self.t is None else self.t - self._baz
+        return self._ilk_gecen if self._baz is None else self.t - self._baz
 
     def sifirla(self) -> None:
         """Süreler, kenarlar, bildirimler, anlaşmalar ve sayaçlar silinir; kişiler, eşik ve ölçümler kalır."""
         self._durumu_temizle()
         self._baz = self.t
+        self._ilk_gecen = 0.0
 
     def tik(self, tik: Tik, duvar: float) -> None:
         if self._baz is None:
-            self._baz = tik.t
+            self._baz = tik.t - self._ilk_gecen
         dt = 0.0 if self.t is None else tik.t - self.t
         self.t = tik.t
         if tik.paketler:
@@ -96,6 +101,9 @@ class Alan:
         for oturum in self.oturumlar:
             oturum.a = yeni if oturum.a == eski else oturum.a
             oturum.b = yeni if oturum.b == eski else oturum.b
+        # Kişi görüştüğü kişisiz kartı kendine aldı: kendisiyle görüşme kaydı olmaz (kenarı da düşer, Kenarlar.tasi).
+        self.oturumlar = [oturum for oturum in self.oturumlar if oturum.a != oturum.b]
+        self._acik_oturum = {anahtar: o for anahtar, o in self._acik_oturum.items() if o.a != o.b}
         if eski in self._bosta:
             self._bosta[yeni] = self._bosta.pop(eski)
         if eski in self._yalniz_bildirildi:
@@ -105,8 +113,8 @@ class Alan:
     def kimligi_emekli_et(self, kimlik: str) -> None:
         """Kişisiz kart masaya döndü: o kartı taşıyan bilinmeyen kişinin süreleri eşlerinde kalır ama kart panodan düşer ve
         kartın sonraki sahibine geçmez (PLAN 5.2 madde 5). Kimlik, panoda görünmeyen bir arşiv kimliğine taşınır."""
-        self._emekli_sayac += 1
-        self.kimligi_tasi(kimlik, f"arsiv:{kimlik}:{self._emekli_sayac}")
+        self.emekli_sayac += 1
+        self.kimligi_tasi(kimlik, f"arsiv:{kimlik}:{self.emekli_sayac}")
 
     def sayaclari_sifirla(self, kisi_id: str) -> None:
         """Kartını kaybeden kişinin boşta sayacı sıfırlanır: yeniden kart alınca eski yalnızlık sayılmaz."""

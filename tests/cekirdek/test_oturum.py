@@ -92,3 +92,14 @@ def test_kisisiz_kart_kaydin_ilk_tarafindaysa_da_kisiye_gecer():
     ata(salon.alan, sahip.kisi_id, "14", salon.duvar)
 
     assert kayitlar(salon) == [(sahip.kisi_id, "k5", 0.0, None)]
+
+
+def test_kisi_yanindaki_bos_karti_kendine_alirsa_kendisiyle_gorusme_kaydi_kalmaz():
+    # Masadaki açık yedek karta 1 dk yakın duran kişi o kartı alırsa: kenar kendiliğinden düşüyor (Kenarlar.tasi);
+    # kayıt da düşmeli, yoksa raporda "Mehmet – Mehmet" görünür ve kayıt toplamı kenar dakikasını tutmaz.
+    salon = Salon().gecir(90.0, {("3", "14"): YAKIN})
+
+    ata(salon.alan, "k2", "14", salon.duvar)
+
+    assert kayitlar(salon) == []
+    assert salon.alan.kenarlar.dakika == {}

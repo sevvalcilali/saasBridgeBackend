@@ -20,8 +20,8 @@
   derlenmiş arayüzü ve `/api/health`'i veriyor; veri uçları yok. B1 (giriş katmanı + sinyal) bitti ve onaylandı (05.10.2026; `docs/B1_NOT.md`). B2 (canlı durum) bitti ve onaylandı
   (05.10.2026; `docs/B2_NOT.md`): Pano, Kurulum ve Sunum gerçek sunucudan (benzetim) canlı veri alıyor.
   B3 (karşılama masası) bitti ve onaylandı (05.10.2026; `docs/B3_NOT.md`).
-  B4 (`/api/cards`) bitti ve onaylandı (`docs/B4_NOT.md`). B5 (görüşme kayıtları, atama geçmişi, rapor) bitti, onay
-  bekliyor (`docs/B5_NOT.md`). Sıradaki: B6 (kalıcılık + sıfırlama; B5+B6 bağımsız incelemesi).
+  B4 (`/api/cards`) bitti ve onaylandı (`docs/B4_NOT.md`). B5 (görüşme kayıtları, atama geçmişi, rapor) bitti ve onaylandı
+  (`docs/B5_NOT.md`). B6 (kalıcılık + sıfırlama) bitti, onay bekliyor (`docs/B6_NOT.md`). Sıradaki: B7 (sertleştirme).
 - **Çalıştırma:** `./baslat.sh` (ya da `.venv/bin/python -m yakinlik`) → `http://localhost:8002`; testler `.venv/bin/pytest`.
 - **Kardeş repo:** https://github.com/sevvalcilali/SaasBridge — arayüz, mock sunucu (`mock-server/mock.js`, davranışın çalışan
   şartnamesi), sözleşme belgesi (`SUNUCUDAN_ISTENENLER.md`), gereksinim belgesi (`UI_TASARIM_BRIEF.md` §2, §5, §9).
@@ -265,7 +265,7 @@ saasBridgeBackend/
 │  ├─ http/…                   # httpx ile sözleşme
 │  └─ izler/*.jsonl            # kayıtlı seri izleri (altın dosyalar)
 ├─ docs/                       # B0_NOT.md … · DAGITIM.md · SERI_PROTOKOL.md
-└─ veri/                       # (git'te yok) etkinlik-*.sqlite · yedek/
+└─ veri/                       # (git'te yok) yakinlik.sqlite · yedek/
 ```
 
 ---
@@ -410,14 +410,26 @@ CREATE TABLE ayar      (anahtar TEXT PRIMARY KEY, deger TEXT);               -- 
 - Okuma: `GET /api/*` bellek modelinden döner; SQLite yalnız **açılışta yükleme** ve **yazma** içindir.
 - Çift ölçüm pencereleri, histerezis sayaçları diske yazılmaz (yeniden başlatmada ≤15 sn'de toparlanır).
 
+**B6'da uygulanan (05.10.2026):** şema belleğin birebir aynası oldu (`yakinlik/depo/sema.sql`): `kisi` satırı silinince
+kalır (`silindi`, kimlik yeniden kullanılmaz), `kart` sütunu açık atamadır; `atama` olay günlüğüdür (`bitis_t` yok);
+kişi başına toplamlar `toplam` tablosunda; kısıt yalnız birincil anahtar ve NOT NULL (bellekteki bir tutarsızlık yazımı
+kilitlemesin). Yazım: diskteki hal bellekte tutulur, fark tek işlemde yazılır, ayna ancak işlem bitince güncellenir.
+Dosya `EXCLUSIVE` kilitle açılır (ikinci sunucu açamaz).
+
 ### 9.2 Yeniden başlatma
 1. Şema varsa yükle; yoksa oluştur. 2. Kişiler + açık atamalar → bellek. 3. Kenarlar, anlaşmalar, bildirimler, oturumlar.
-4. Açık oturumlar (`end_s IS NULL`): yeniden başlatma anında `end_s = elapsed` ile **kapatılır** (gerçekte sürüyorsa giriş gecikmesi — 60 sn — sonra yeni kayıt açılır;
-   rapor dürüst kalır). 5. `elapsed` = `monotonic() − (şimdi − baslangic_t)`.
+4. Açık oturumlar (`end_s IS NULL`) **son yazılan** `elapsed` ile kapatılır (B6 kararı: kapalı kalınan süre görüşmeye
+   yazılmaz, kayıt toplamı kenar dakikasına eşit kalır; gerçekte sürüyorsa 60 sn sonra yeni kayıt açılır) ve biten sayılır.
+5. `elapsed` = son yazılan + kapalı kalınan duvar saati süresi. Kayıtlı eşik `config.toml`'dakini ezer.
 
 ### 9.3 Yedek
-- Dosya: `veri/etkinlik-YYYY-MM-DD.sqlite`; `baslat.sh` açılışta `veri/yedek/` altına kopya alır.
-- `reset` öncesi otomatik kopya (`…-reset-HHMMSS.sqlite`): yanlışlıkla sıfırlama geri alınabilir.
+- Dosya: `veri/yakinlik.sqlite` — **tek dosya** (Şevval kararı, 05.10.2026: sunucu her açılışta kaldığı yerden sürer, gece
+  yarısını geçse de). Yeni etkinlik: `--yeni-etkinlik` → eski dosya doğrulanmış yedeğe (`yedek/yakinlik-yeni-etkinlik-…`)
+  kopyalanır, ancak sonra silinir; sunucu boş başlar.
+- Açılışta yedek Python'da alınır (`yedek/yakinlik-acilis-…`, en yeni 10 tutulur; Windows'ta da çalışsın diye `baslat.sh`'ta değil).
+- `reset` öncesi doğrulanmış kopya (`yedek/yakinlik-sifirlama-…`): yedek alınamazsa sıfırlanmaz (500 `{ok:false, hata}`).
+- Kalıcılık varsayılanı: gerçek alıcıda (`--kaynak seri`) hep açık (`veri/`); benzetim ve oynatma mock gibi temiz başlar,
+  `--veri` ile açılır (benzetimde salon yüklenen kayıt defterine uyarlanır).
 
 ---
 
@@ -650,7 +662,9 @@ commit'lerini alır, sonunda `docs/Bn_NOT.md` yazılır. Süreler tek kişi, tam
 - **Kabul:** `oturum.test.js` eşdeğeri (çift başına kayıt toplamı ≈ `edges.min` ±1 tik); Faz 4 kabul 13/13 (zaman çizelgesi,
   rapor, iki CSV) gerçek sunucuyla.
 
-#### B6 ⬜ Kalıcılık + sıfırlama (tahmin: 2 gün)
+#### B6 ✅ Kalıcılık + sıfırlama (tahmin: 2 gün)
+- **Yapıldı** (`docs/B6_NOT.md`): `depo/sema.sql` + `depo/sqlite.py`; tik ve masa işlemi sonrası yalnız değişenler; açılışta
+  yükleme; sıfırlama ve yeni etkinlik öncesi doğrulanmış yedek. Plan farkları Bölüm 9'da. `pytest` 413/413 (`kill -9` dahil). B5+B6 incelemesi: 3 önemli bulgu düzeltildi.
 - `depo/sema.sql` + `depo/sqlite.py` (WAL): kişi, atama, oturum, kenar, bildirim, anlaşma, ayar (eşik, başlangıç zamanı,
   etkinlik). Tik sonunda yalnız **değişenler**, tek işlem. Açılışta yükleme; açık oturumlar yeniden başlatmada kapatılır;
   `elapsed` sürer. `reset`: süreler/kenarlar/kayıtlar/bildirimler/atama geçmişi silinir, **kişiler + açık atamalar + eşik kalır**
@@ -728,6 +742,8 @@ Hiçbiri B0–B2'yi engellemez; varsayılanlar bu belgededir. Soru 1–6'nın ta
       sürmesi B6; `--tohum` B2.6 ile; benzetim tik kadansı (bekle-sonra-çalış kayması) açık. Ayrıntı: `docs/B1_NOT.md`.
 - [ ] Arayüz reposu (SaasBridge), ayrı onay: "5 sn" yazan iki metin → 1 dakika (Rapor dipnotu, Kurulum çift tablosu), mock'un
       `GIRIS_SN` → 60, B2.6 (mock testlerini gerçek sunucuya koşturma). `docs/B2_NOT.md` → "Arayüz reposunda yapılması gerekenler".
+- [ ] B7: R5'teki otomatik yeniden başlatma döngüsü `--yeni-etkinlik`i **tekrarlamamalı** (her çöküşte veri yedeğe
+      taşınırdı); diske yazım bozulursa yalnız günlüğe yazılıyor, arayüzde işaret yok (sözleşme değişikliği gerekir).
 - [ ] Grafik verisi (`history`) yükü: 3 saatte ~850 çift → tik ~50 ms, `/state` ~528 KB. Öneri: yalnız Kurulum açıkken
       göndermek (Bölüm 10 b; arayüz değişikliği) — karar bekliyor.
 
@@ -755,7 +771,7 @@ bölümleri değiştirilmedi. Madde 6 karara bağlandı (04.10.2026); diğerleri
    **Karar (04.10.2026, Şevval):** mock'taki düzen. Sunucu benzetim modunda açılınca 25 örnek kişi kartlarıyla hazır gelir
    (kadro benzetimde üretilir, sunucu kayıt defterini onunla kurar); masa kart verip iade ettikçe sahte kartlar salona
    girer / çıkar (sunucu benzetime haber verir); gerçek donanımda bunların hiçbiri devreye girmez. Kalıcılıkla birlikte
-   yaşama ayrıntısı B6'da.
+   yaşama (B6): benzetim varsayılan olarak kalıcı değil; `--veri` ile açılınca salon diskteki kayıt defterine uyarlanır.
 7. **Durum kodu sapmaları (Bölüm 8.2 ↔ mock).** Geçersiz `rol` (plan 400; mock `guest` yapıp 200), atanmamış ama bilinen kartın
    iadesi (plan 404; mock 200), `DELETE` (plan `silindi` işareti; mock kaydı siler).
    **Karar (B3, 05.10.2026):** sözleşme belgesi (`SUNUCUDAN_ISTENENLER.md`) ve mock aynı yönde; sözleşmenin tek kaynağı o

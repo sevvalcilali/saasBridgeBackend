@@ -17,7 +17,7 @@ class Ayar:
     host: str = "0.0.0.0"  # masa tableti ve salon ekranı başka cihazdan bağlanır (PLAN Bölüm 11)
     kaynak: str = "benzetim"
     dist: Path = Path("../SaasBridge/dist")
-    veri: Path | None = None
+    veri: Path | None = None  # kalıcı veri klasörü; verilmezse veri_klasoru() kuralı
     seri: str | None = None
     esik: float = -72
     # Etkinlik bilgisi (/state.event); varsayılanlar mock ile aynı.
@@ -31,6 +31,15 @@ class Ayar:
     kaydet: Path | None = None  # her tikin paketleri bu dosyaya yazılır
     iz: Path | None = None  # --kaynak kayit ile oynatılacak dosya
     anlasma_sn: float | None = None  # anlaşma bildirimini bu sürede zorla (rules.dealAfterS; mock'taki --anlasmaSn)
+    yeni_etkinlik: bool = False  # eski veri yedeğe taşınır, boş başlanır (yalnız komut satırından)
+
+
+def veri_klasoru(ayar: Ayar) -> Path | None:
+    """Kalıcı veri klasörü (None: kalıcılık kapalı). Gerçek alıcıda (seri) varsayılan "veri": etkinlikte veri hep diske
+    yazılır. Benzetim ve oynatma mock gibi her açılışta temiz başlar; denemek için --veri verilir."""
+    if ayar.veri is not None:
+        return ayar.veri
+    return Path("veri") if ayar.kaynak == "seri" else None
 
 
 def _tam_sayi(deger: object) -> bool:
@@ -124,7 +133,7 @@ def _komut_satirindan(ayar: Ayar, argumanlar: Sequence[str] | None) -> Ayar:
     ayristirici.add_argument("--port", type=int, help="dinlenecek port")
     ayristirici.add_argument("--kaynak", choices=KAYNAKLAR, help="paket kaynağı")
     ayristirici.add_argument("--dist", type=Path, help="derlenmiş arayüz klasörü (SaasBridge/dist)")
-    ayristirici.add_argument("--veri", type=Path, help="veri yolu")
+    ayristirici.add_argument("--veri", type=Path, help="kalıcı veri klasörü (gerçek alıcıda varsayılan: veri)")
     ayristirici.add_argument("--seri", help="alıcının seri aygıtı (ör. /dev/ttyUSB0, COM5)")
     ayristirici.add_argument("--kisi", type=_pozitif_tam, help="benzetimdeki kişi sayısı (en çok 97)")
     ayristirici.add_argument("--hizlandir", type=_pozitif_sayi, help="benzetim / oynatma zamanı çarpanı")
@@ -133,6 +142,10 @@ def _komut_satirindan(ayar: Ayar, argumanlar: Sequence[str] | None) -> Ayar:
     ayristirici.add_argument("--iz", type=Path, help="--kaynak kayit ile oynatılacak iz dosyası")
     ayristirici.add_argument(
         "--anlasma-sn", dest="anlasma_sn", type=_pozitif_sayi, help="anlaşma bildirimini bu kadar sn birliktelikte zorla (deneme)"
+    )
+    ayristirici.add_argument(
+        "--yeni-etkinlik", dest="yeni_etkinlik", action="store_true", default=None,
+        help="eski veriyi yedek klasörüne taşı, yeni etkinliğe boş başla",
     )
     verilen = {ad: deger for ad, deger in vars(ayristirici.parse_args(argumanlar)).items() if deger is not None}
     if "kopma" in verilen:

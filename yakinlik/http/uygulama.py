@@ -44,6 +44,7 @@ def uygulama_olustur(ayar: Ayar, motor: Motor | None = None) -> FastAPI:
             gorev.cancel()
             with suppress(asyncio.CancelledError):
                 await gorev
+            motor.kapat()  # son hal diske; veri dosyası bırakılır
 
     # /docs ve /openapi.json kapalı: sayfaları CDN ister, etkinlikte internet yok.
     uygulama = FastAPI(

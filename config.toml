@@ -6,7 +6,8 @@ host = "0.0.0.0"              # yalnız bu bilgisayardan erişim için "127.0.0.
 kaynak = "benzetim"           # benzetim | kayit | seri
 dist = "../SaasBridge/dist"   # derlenmiş arayüz (SaasBridge'de `npm run build`)
 esik = -72                    # dBm; varsayılan eşik
-# veri = "veri"               # veri yolu (B6'da kullanılacak)
+# veri = "veri"               # kalıcı veri klasörü; gerçek alıcıda (seri) varsayılan budur,
+                              # benzetimde verilmezse her açılış temiz başlar
 # seri = "/dev/ttyUSB0"       # alıcının seri aygıtı (B8'de kullanılacak)
 
 [etkinlik]

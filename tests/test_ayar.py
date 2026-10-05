@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from yakinlik.ayar import Ayar, ayar_yukle
+from yakinlik.ayar import Ayar, ayar_yukle, veri_klasoru
 
 
 def yukle(tmp_path, config=None, argumanlar=()):
@@ -186,3 +186,16 @@ def test_depodaki_config_toml_yuklenebilir():
 
     assert yol.exists()
     assert isinstance(ayar_yukle([], config_yolu=yol), Ayar)
+
+
+def test_kalici_veri_gercek_alicida_varsayilan_benzetimde_istenirse():
+    # Benzetim mock gibi her açılışta temiz başlar; gerçek etkinlikte (seri) veri hep diske yazılır.
+    assert veri_klasoru(Ayar()) is None
+    assert veri_klasoru(Ayar(kaynak="kayit")) is None
+    assert veri_klasoru(Ayar(kaynak="seri")) == Path("veri")
+    assert veri_klasoru(Ayar(veri=Path("deneme"))) == Path("deneme")
+
+
+def test_yeni_etkinlik_bayragi_okunur(tmp_path):
+    assert yukle(tmp_path).yeni_etkinlik is False
+    assert yukle(tmp_path, argumanlar=["--yeni-etkinlik"]).yeni_etkinlik is True
