@@ -158,7 +158,10 @@ def test_benzetim_ve_kayit_bayraklari_okunur(tmp_path):
 
 @pytest.mark.parametrize(
     "argumanlar",
-    [["--kisi", "0"], ["--kisi", "-3"], ["--hizlandir", "0"], ["--hizlandir", "-2"], ["--kopma", "2"]],
+    [
+        ["--kisi", "0"], ["--kisi", "-3"], ["--hizlandir", "0"], ["--hizlandir", "-2"], ["--hizlandir", "inf"],
+        ["--hizlandir", "nan"], ["--kopma", "2"],
+    ],
 )
 def test_gecersiz_benzetim_bayragi_reddedilir(tmp_path, argumanlar):
     with pytest.raises(SystemExit):

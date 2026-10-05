@@ -5,12 +5,17 @@ her zaman aynı sinyalleri üretir (altın dosya testleri bunun üstüne kurulur
 """
 import asyncio
 import json
+import math
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import aclosing
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from .kaynak import PaketKaynagi, Tik
 from .paket import Paket
+
+if TYPE_CHECKING:
+    from .benzetim import Benzetim
 
 
 def _satir(tik: Tik) -> str:
@@ -18,29 +23,54 @@ def _satir(tik: Tik) -> str:
         {"kart": paket.kart, "duyulanlar": [list(duyulan) for duyulan in paket.duyulanlar], "pil": paket.pil, "t": paket.t}
         for paket in tik.paketler
     ]
-    return json.dumps({"t": tik.t, "paketler": paketler}, ensure_ascii=False, separators=(",", ":"))
+    # allow_nan=False: sonlu olmayan sayı (NaN) yazılırken yakalansın; JSON'da geçerli değildir.
+    return json.dumps({"t": tik.t, "paketler": paketler}, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+
+
+def _sayi(deger: object) -> bool:
+    return isinstance(deger, (int, float)) and not isinstance(deger, bool) and math.isfinite(deger)
+
+
+def _denetle(gecerli: bool, alan: str, beklenen: str, deger: object) -> None:
+    if not gecerli:
+        raise ValueError(f"{alan} {beklenen} olmalı, gelen: {deger!r}")
 
 
 def _tik(satir: str) -> Tik:
+    """Bir iz satırını tike çevirir. Alan türleri burada denetlenir: bozuk iz çekirdekte değil okurken yakalansın."""
     veri = json.loads(satir)
-    return Tik(
-        veri["t"],
-        tuple(
-            Paket(paket["kart"], tuple((kart, rssi) for kart, rssi in paket["duyulanlar"]), paket["pil"], paket["t"])
-            for paket in veri["paketler"]
-        ),
-    )
+    _denetle(_sayi(veri["t"]), "t", "sonlu sayı", veri["t"])
+    paketler = []
+    for paket in veri["paketler"]:
+        kart, pil, t = paket["kart"], paket["pil"], paket["t"]
+        _denetle(isinstance(kart, str), "kart", "metin", kart)
+        _denetle(pil is None or (isinstance(pil, int) and not isinstance(pil, bool)), "pil", "tam sayı ya da null", pil)
+        _denetle(_sayi(t), "t", "sonlu sayı", t)
+        duyulanlar = []
+        for diger, rssi in paket["duyulanlar"]:
+            _denetle(isinstance(diger, str), "duyulan kart", "metin", diger)
+            _denetle(_sayi(rssi), "dBm", "sonlu sayı", rssi)
+            duyulanlar.append((diger, rssi))
+        paketler.append(Paket(kart, tuple(duyulanlar), pil, t))
+    return Tik(veri["t"], tuple(paketler))
 
 
 class KaydedenKaynak:
-    """Başka bir kaynağı sarar: her tiki `dosya`ya yazar, sonra aynen iletir (`--kaydet`)."""
+    """Başka bir kaynağı sarar: her tiki `dosya`ya yazar, sonra aynen iletir (`--kaydet`).
+
+    Var olan dosyanın üstüne yazmaz (FileExistsError): eski bir kayıt sessizce silinmesin.
+    """
 
     def __init__(self, kaynak: PaketKaynagi, dosya: Path) -> None:
         self._kaynak = kaynak
         self._dosya = dosya
 
+    @property
+    def benzetim(self) -> "Benzetim | None":
+        return self._kaynak.benzetim
+
     async def tikler(self) -> AsyncGenerator[Tik, None]:
-        with self._dosya.open("w", encoding="utf-8") as dosya:
+        with self._dosya.open("x", encoding="utf-8") as dosya:
             async with aclosing(self._kaynak.tikler()) as akis:
                 async for tik in akis:
                     dosya.write(_satir(tik) + "\n")
@@ -50,6 +80,8 @@ class KaydedenKaynak:
 
 class KayitKaynak:
     """Kaydedilmiş izi kayıttaki aralıklarla geri oynatır (`--kaynak kayit --iz dosya`). İz bitince akış biter."""
+
+    benzetim = None
 
     def __init__(
         self, dosya: Path, hiz: float = 1.0, bekle: Callable[[float], Awaitable[None]] = asyncio.sleep

@@ -1,5 +1,6 @@
 """Sunucu ayarları. Öncelik: varsayılanlar < config.toml < komut satırı."""
 import argparse
+import math
 import tomllib
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
@@ -107,8 +108,8 @@ def _pozitif_tam(metin: str) -> int:
 
 def _pozitif_sayi(metin: str) -> float:
     deger = float(metin)
-    if not deger > 0:
-        raise argparse.ArgumentTypeError("0'dan büyük olmalı")
+    if not (math.isfinite(deger) and deger > 0):
+        raise argparse.ArgumentTypeError("0'dan büyük, sonlu bir sayı olmalı")
     return deger
 
 

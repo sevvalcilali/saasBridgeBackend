@@ -64,11 +64,80 @@ async def test_oynatma_hizlandirilabilir(tmp_path, bekleme_yok, ilk_tikler):
     assert bekleme_yok.istenen == [0.25, 0.75]
 
 
+async def test_kayit_her_tikte_diske_yazilir(tmp_path):
+    # Kayıt çoğu zaman bir çökmeyi yakalamak için açılır: süreç aniden kapansa da gelen tikler dosyada olmalı.
+    dosya = tmp_path / "iz.jsonl"
+    akis = KaydedenKaynak(SabitKaynak(ORNEK_TIKLER), dosya).tikler()
+    try:
+        await anext(akis)
+
+        assert len(dosya.read_text(encoding="utf-8").splitlines()) == 1
+    finally:
+        await akis.aclose()
+
+
+async def test_kaydeden_kaynak_var_olan_dosyanin_ustune_yazmaz(tmp_path, ilk_tikler):
+    dosya = tmp_path / "iz.jsonl"
+    dosya.write_text("ÖNEMLİ ALTIN DOSYA\n", encoding="utf-8")
+
+    with pytest.raises(FileExistsError):
+        await ilk_tikler(KaydedenKaynak(SabitKaynak(ORNEK_TIKLER), dosya))
+
+    assert dosya.read_text(encoding="utf-8") == "ÖNEMLİ ALTIN DOSYA\n"
+
+
+async def test_sonlu_olmayan_dbm_kayda_yazilmaz(tmp_path, ilk_tikler):
+    tik = Tik(0.5, (Paket("7", (("12", float("nan")),), None, 0.5),))
+
+    with pytest.raises(ValueError):
+        await ilk_tikler(KaydedenKaynak(SabitKaynak([tik]), tmp_path / "iz.jsonl"))
+
+
+async def test_bos_satirlar_atlanir(tmp_path, bekleme_yok, ilk_tikler):
+    dosya = tmp_path / "iz.jsonl"
+    dosya.write_text('\n{"t": 0.5, "paketler": []}\n\n   \n{"t": 1.0, "paketler": []}\n', encoding="utf-8")
+
+    tikler = await ilk_tikler(KayitKaynak(dosya, bekle=bekleme_yok))
+
+    assert [tik.t for tik in tikler] == [0.5, 1.0]
+
+
 async def test_bozuk_iz_satiri_satir_numarasiyla_reddedilir(tmp_path, bekleme_yok, ilk_tikler):
     dosya = tmp_path / "iz.jsonl"
     dosya.write_text('{"t": 0.5, "paketler": []}\nbozuk satır\n', encoding="utf-8")
 
     with pytest.raises(ValueError, match="satır 2"):
+        await ilk_tikler(KayitKaynak(dosya, bekle=bekleme_yok))
+
+
+@pytest.mark.parametrize(
+    "paket",
+    [
+        '{"kart": 7, "duyulanlar": [], "pil": null, "t": 0.5}',  # kart numarası metin olmalı
+        '{"kart": "7", "duyulanlar": [["12", "cok"]], "pil": null, "t": 0.5}',  # dBm sayı olmalı
+        '{"kart": "7", "duyulanlar": [["12", NaN]], "pil": null, "t": 0.5}',  # dBm sonlu olmalı
+        '{"kart": "7", "duyulanlar": [["12", true]], "pil": null, "t": 0.5}',
+        '{"kart": "7", "duyulanlar": [[12, -50]], "pil": null, "t": 0.5}',
+        '{"kart": "7", "duyulanlar": [], "pil": "yüz", "t": 0.5}',
+        '{"kart": "7", "duyulanlar": [], "pil": true, "t": 0.5}',
+        '{"kart": "7", "duyulanlar": [], "pil": null, "t": "a"}',
+    ],
+)
+async def test_yanlis_turdeki_iz_alani_satir_numarasiyla_reddedilir(tmp_path, bekleme_yok, ilk_tikler, paket):
+    # Bozuk iz okunurken yakalanmalı; yoksa hata çekirdekte, anlaşılmaz bir yerde çıkar.
+    dosya = tmp_path / "iz.jsonl"
+    dosya.write_text('{"t": 0.5, "paketler": []}\n{"t": 1.0, "paketler": [' + paket + "]}\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="satır 2"):
+        await ilk_tikler(KayitKaynak(dosya, bekle=bekleme_yok))
+
+
+@pytest.mark.parametrize("t", ['"a"', "true", "NaN"])
+async def test_yanlis_turdeki_tik_ani_reddedilir(tmp_path, bekleme_yok, ilk_tikler, t):
+    dosya = tmp_path / "iz.jsonl"
+    dosya.write_text('{"t": ' + t + ', "paketler": []}\n', encoding="utf-8")
+
+    with pytest.raises(ValueError, match="satır 1"):
         await ilk_tikler(KayitKaynak(dosya, bekle=bekleme_yok))
 
 
@@ -121,9 +190,63 @@ async def test_kaydet_verilirse_kaynagin_tikleri_dosyaya_yazilir(tmp_path, bekle
     assert await ilk_tikler(KayitKaynak(dosya, bekle=bekleme_yok)) == tikler
 
 
+def test_kaydedilen_benzetimin_kadrosuna_ulasilir(tmp_path, bekleme_yok):
+    # Sunucu benzetim modunda kayıt defterini kadrodan kurar; kayıt açıkken de kadroya ulaşabilmeli.
+    kaynak = kaynak_olustur(Ayar(kaynak="benzetim", kisi=5, kaydet=tmp_path / "iz.jsonl"), bekle=bekleme_yok)
+
+    assert len(kaynak.benzetim.kadro) == 5
+
+
+async def test_kayit_kaynaginda_benzetim_yoktur(tmp_path, bekleme_yok, ilk_tikler):
+    dosya = tmp_path / "iz.jsonl"
+    await ilk_tikler(KaydedenKaynak(SabitKaynak(ORNEK_TIKLER), dosya))
+
+    assert kaynak_olustur(Ayar(kaynak="kayit", iz=dosya), bekle=bekleme_yok).benzetim is None
+
+
 def test_kayit_kaynagi_iz_dosyasi_ister():
     with pytest.raises(ValueError, match="--iz"):
         kaynak_olustur(Ayar(kaynak="kayit"))
+
+
+def test_oynatilacak_iz_dosyasi_yoksa_kaynak_kurulmaz(tmp_path):
+    # Hata sunucu açılırken çıkmalı, ilk tikte (sunucu çoktan yayındayken) değil.
+    with pytest.raises(ValueError, match="yok.jsonl"):
+        kaynak_olustur(Ayar(kaynak="kayit", iz=tmp_path / "yok.jsonl"))
+
+
+def test_iz_yalniz_kayit_kaynagiyla_verilebilir(tmp_path):
+    # --iz verilip --kaynak unutulursa sessizce benzetim çalışmasın.
+    dosya = tmp_path / "iz.jsonl"
+    dosya.write_text('{"t": 0.5, "paketler": []}\n', encoding="utf-8")
+
+    with pytest.raises(ValueError, match="yalnız"):
+        kaynak_olustur(Ayar(kaynak="benzetim", iz=dosya))
+
+
+def test_kaydet_ile_iz_ayni_dosyaysa_kaynak_kurulmaz_ve_iz_bozulmaz(tmp_path):
+    dosya = tmp_path / "iz.jsonl"
+    dosya.write_text('{"t": 0.5, "paketler": []}\n', encoding="utf-8")
+
+    with pytest.raises(ValueError, match="aynı dosya"):
+        kaynak_olustur(Ayar(kaynak="kayit", iz=dosya, kaydet=tmp_path / "." / "iz.jsonl"))
+
+    assert dosya.read_text(encoding="utf-8") == '{"t": 0.5, "paketler": []}\n'
+
+
+def test_kaydet_var_olan_dosyanin_ustune_yazmaz(tmp_path):
+    dosya = tmp_path / "eski.jsonl"
+    dosya.write_text("ÖNEMLİ ALTIN DOSYA\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="zaten var"):
+        kaynak_olustur(Ayar(kaynak="benzetim", kaydet=dosya))
+
+    assert dosya.read_text(encoding="utf-8") == "ÖNEMLİ ALTIN DOSYA\n"
+
+
+def test_kayit_klasoru_yoksa_kaynak_kurulmaz(tmp_path):
+    with pytest.raises(ValueError, match="klasör"):
+        kaynak_olustur(Ayar(kaynak="benzetim", kaydet=tmp_path / "yok" / "iz.jsonl"))
 
 
 def test_seri_kaynak_henuz_yok():
