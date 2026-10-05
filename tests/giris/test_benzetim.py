@@ -225,3 +225,49 @@ async def test_kaynak_yarim_saniyede_bir_tik_uretir_hizlandirma_benzetim_zamanin
 
     assert bekleme_yok.istenen == [0.5, 0.5, 0.5]  # gerçek zamanda hep 0,5 sn
     assert [tik.t for tik in tikler] == [5.0, 10.0, 15.0]  # benzetim zamanı 10 kat hızlı
+
+
+# --- masa ile bağlantı (PLAN B3, 16.3 madde 6 kararı) ---
+
+def test_masadan_verilen_kart_salona_girer_masadan_cikar():
+    benzetim = Benzetim(kisi=25, tohum=1, kopma=False)
+    kart = benzetim.masadaki[0]
+
+    benzetim.kart_ver(kart, "founder")
+    tikler = kos(benzetim, 20 * 60)
+
+    assert kart not in benzetim.masadaki
+    assert any(kart in duyulanlar(tik) for tik in tikler)  # salonda biriyle yan yana gelip ölçüldü
+
+
+def test_iade_edilen_kart_salondan_cikar_masada_acik_durur():
+    benzetim = Benzetim(kisi=25, tohum=1, kopma=False)
+    kart = benzetim.kadro[0].kart
+
+    benzetim.kart_al(kart, masaya=True)
+    tikler = kos(benzetim, 5 * 60)
+
+    assert kart in benzetim.masadaki
+    assert all(kart in gonderenler(tik) and kart not in duyulanlar(tik) for tik in tikler)
+
+
+def test_degisimde_birakilan_eski_kart_kapanir():
+    benzetim = Benzetim(kisi=25, tohum=1, kopma=False)
+    kart = benzetim.kadro[0].kart
+
+    benzetim.kart_al(kart, masaya=False)
+    tik = benzetim.tik(0.5)
+
+    assert kart not in gonderenler(tik) | duyulanlar(tik)
+    assert kart not in benzetim.masadaki
+
+
+def test_kirk_besinci_saniyeden_once_verilen_kart_14_ikinci_kez_eklenmez():
+    benzetim = Benzetim(kisi=25, tohum=1, kopma=False)
+    benzetim.kart_ver("14", "guest")
+    kos(benzetim, 60.0)  # 45. sn senaryosu geçti
+
+    benzetim.kart_al("14", masaya=False)  # tek kopya varsa kart artık salonda değil
+    tik = benzetim.tik(0.5)
+
+    assert "14" not in gonderenler(tik)

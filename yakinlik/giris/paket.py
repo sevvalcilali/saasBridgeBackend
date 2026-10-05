@@ -17,6 +17,19 @@ def kart_no(kart: str) -> str:
     return str(int(kart)) if _rakamlardan_mi(kart) else kart
 
 
+def kart_no_coz(deger: object) -> str | None:
+    """Elle yazılan kart numarası → tek biçim ("007" → "7"); 1–99 arası kişi kartı değilse None.
+
+    Arayüzdeki kartNoCoz ve mock'taki kartNo ile aynı kural (en çok üç rakam, boşluklar atılır).
+    """
+    if not isinstance(deger, (str, int)):
+        return None
+    metin = str(deger).strip()  # True → "True": rakam değil, reddedilir
+    if not (1 <= len(metin) <= 3 and _rakamlardan_mi(metin)):
+        return None
+    return str(int(metin)) if 1 <= int(metin) <= EN_BUYUK_KISI_KARTI else None
+
+
 def kisi_karti_mi(kart: str) -> bool:
     """Kart no 1–99 kişi kartıdır; 100 ve üstü dinleyici cihazdır, kişi sayılmaz. Hiçbir girdide hata vermez."""
     return _rakamlardan_mi(kart) and 1 <= int(kart) <= EN_BUYUK_KISI_KARTI

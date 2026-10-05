@@ -7,13 +7,15 @@ Alan durumunu yalnız burası değiştirir (İ3). Tik işleme hiç `await` içer
 import asyncio
 import json
 import logging
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from contextlib import aclosing
 
 from .ayar import Ayar
+from .cekirdek import atama
 from .cekirdek.alan import Alan
+from .cekirdek.csv_ice import AktarmaSonucu, iceri_aktar
 from .cekirdek.durum import Etkinlik, durum_uret
-from .cekirdek.kisi import KisiDefteri
+from .cekirdek.kisi import Kisi, KisiDefteri
 from .giris.kaynak import TIK_SN, PaketKaynagi, Tik
 from .giris.olustur import kaynak_olustur
 from .saat import GercekSaat, Saat
@@ -106,6 +108,62 @@ class Motor:
         except Exception:
             gunluk.exception("tik işlenemedi (t=%s); yayın sürüyor", tik.t)
         self._yayinla()
+
+    # --- karşılama masası (B3): kayıt defteri ve kart hareketleri; değişiklik /state'te hemen görünür ---
+
+    @property
+    def defter(self) -> KisiDefteri:
+        return self._alan.defter
+
+    def kisi_ekle(self, alanlar: Mapping[str, object]) -> Kisi:
+        """Kartsız yeni kişi (panoda görünmez, durum değişmez)."""
+        return self.defter.ekle(ad=alanlar.get("ad"), rol=alanlar.get("rol"), kurum=alanlar.get("kurum"),
+                                yildiz=alanlar.get("yildiz"), notu=alanlar.get("not"))
+
+    def kisi_guncelle(self, kisi_id: str, alanlar: Mapping[str, object]) -> Kisi | None:
+        kisi = self.defter.guncelle(kisi_id, alanlar)
+        if kisi is not None and kisi.atanan_kart is not None:
+            self._guncelle()  # kartı varsa panodaki adı / rolü hemen değişsin
+        return kisi
+
+    def kisi_sil(self, kisi_id: str) -> bool:
+        """Kişiyi listeden çıkarır; kartı varsa önce iade edilir. Süreleri silinmez (Soru 4 varsayılanı)."""
+        kisi = self.defter.kisi(kisi_id)
+        if kisi is None:
+            return False
+        if kisi.atanan_kart is not None:
+            self.iade(kisi.atanan_kart, ayrildi=True)
+        self.defter.sil(kisi_id)
+        return True
+
+    def iceri_aktar(self, metin: str) -> AktarmaSonucu:
+        return iceri_aktar(self.defter, metin)
+
+    def ata(self, kisi_id: str, kart: str) -> bool:
+        """Kartı kişiye verir; kişi yoksa False."""
+        if self.defter.kisi(kisi_id) is None:
+            return False
+        self._benzetime_bildir(atama.ata(self._alan, kisi_id, kart, self._saat.simdi()))
+        self._guncelle()
+        return True
+
+    def iade(self, kart: str, ayrildi: bool) -> None:
+        self._benzetime_bildir(atama.iade(self._alan, kart, ayrildi, self._saat.simdi()))
+        self._guncelle()
+
+    def kart_biliniyor(self, kart: str) -> bool:
+        """Kart bir kişide mi ya da alıcı onu hiç duydu mu? Hiç bilinmeyen kart masaya hayalet olarak eklenmesin."""
+        return self.defter.kart_sahibi(kart) is not None or self._alan.sinyal.duyuldu_mu(kart)
+
+    def _benzetime_bildir(self, hareket: atama.KartHareketi) -> None:
+        """Benzetimde masa kart verip iade ettikçe sahte kartlar salona girer / çıkar (16.3 madde 6 kararı)."""
+        benzetim = self._kaynak.benzetim
+        if benzetim is None:
+            return
+        for kart, masaya in hareket.cikan:
+            benzetim.kart_al(kart, masaya)
+        for kart, rol in hareket.giren:
+            benzetim.kart_ver(kart, rol)
 
     def esik_ayarla(self, dbm: float) -> None:
         self._alan.esik = dbm

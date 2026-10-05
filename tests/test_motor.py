@@ -190,3 +190,19 @@ async def test_durum_hic_uretilemese_de_motor_durmaz(monkeypatch):
         await motor.calis()
 
     assert bekle.istenen == [0.5, 0.5, 0.5]
+
+
+# --- masa ↔ benzetim (16.3 madde 6 kararı) ---
+
+def test_masadan_kart_verilince_ve_iade_edilince_benzetim_haberdar_olur():
+    motor = Motor.ayardan(Ayar(kisi=5))
+    benzetim = motor._kaynak.benzetim
+    kart = benzetim.masadaki[0]
+    kisi = motor.kisi_ekle({"ad": "Masadan", "rol": "founder"})
+
+    motor.ata(kisi.kisi_id, kart)
+    salonda = kart not in benzetim.masadaki
+    motor.iade(kart, ayrildi=True)
+
+    assert salonda
+    assert kart in benzetim.masadaki

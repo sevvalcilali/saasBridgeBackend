@@ -19,7 +19,8 @@
 - **Durum:** B0 (iskelet) bitti ve onaylandı (04.10.2026; teslim notu `docs/B0_NOT.md`). Sunucu
   derlenmiş arayüzü ve `/api/health`'i veriyor; veri uçları yok. B1 (giriş katmanı + sinyal) bitti ve onaylandı (05.10.2026; `docs/B1_NOT.md`). B2 (canlı durum) bitti ve onaylandı
   (05.10.2026; `docs/B2_NOT.md`): Pano, Kurulum ve Sunum gerçek sunucudan (benzetim) canlı veri alıyor.
-  Sıradaki: B3 (karşılama masası; ayrı onay).
+  B3 (karşılama masası) bitti ve onaylandı (05.10.2026; `docs/B3_NOT.md`).
+  Sıradaki: B4 (`/api/cards`; ayrı onay).
 - **Çalıştırma:** `./baslat.sh` (ya da `.venv/bin/python -m yakinlik`) → `http://localhost:8002`; testler `.venv/bin/pytest`.
 - **Kardeş repo:** https://github.com/sevvalcilali/SaasBridge — arayüz, mock sunucu (`mock-server/mock.js`, davranışın çalışan
   şartnamesi), sözleşme belgesi (`SUNUCUDAN_ISTENENLER.md`), gereksinim belgesi (`UI_TASARIM_BRIEF.md` §2, §5, §9).
@@ -84,8 +85,17 @@
 - Birimler: `live/min/invMin/edges.min` **dakika**; `seenAgo/receiverAge/elapsed` **saniye**. `clock` ve `elapsed` aynı andan.
 
 ### 0.4 Doğrulama sırası (her değişiklik)
-1. `pytest` tamamen yeşil. 2. SaasBridge'de `npm run build`. 3. Arayüz tarayıcıda **gerçek sunucuyla** denenir
-(390 / 768 / 1280). 4. Her adım kendi commit'i; bu dosyada ilgili adım ✅ + kısa "Yapıldı:" notu; faz sonunda `docs/Bn_NOT.md`.
+1. `pytest` tamamen yeşil. 2. Her adım kendi commit'i; bu dosyada ilgili adım ✅ + kısa "Yapıldı:" notu; faz sonunda
+`docs/Bn_NOT.md`.
+
+**Tempo — hızlı ama güvenli (Şevval, 05.10.2026):**
+- Her fazda mutlaka: yeni her davranış için test; commit'ten önce bütün test paketi yeşil (kırmızıyla sonraki faza
+  geçilmez); kritik kurallarda (yetki, ödeme, veri silme gibi) kodu bilerek bozma denemesi, faz başına en çok 3–5 kural;
+  emin olunmayan gereksinimde tahmin yok, Şevval'e sorulur.
+- Hafifletilenler: ayrı inceleme iki fazda bir ve proje sonunda bir kez daha; tarayıcı testi yalnız arayüzü değiştiren
+  büyük fazların sonunda (kişiler ad değil ID ile seçilir); faz başına tek commit ve 3–5 satırlık özet; ortamdan
+  kaynaklı küçük sorunda bir kez temizle-tekrar dene, tekrar ederse araştır ya da söyle; komutlar bash ile (zsh değil).
+- Hiçbir zaman kısaltılmaz: veritabanı şeması değişiklikleri, geri alınamayan işlemler, güvenlikle ilgili kod.
 
 ### 0.5 Tamamlanma tanımı (her faz)
 - [ ] Çekirdek değişikliği birim testli; `pytest` yeşil; `ruff`/`mypy` (varsa) temiz.
@@ -352,12 +362,12 @@ Tüm uçlar aynı host:port (CORS yok). Gövdeler JSON, hata `4xx {"ok": false, 
 | Uç | 2xx | 4xx | Kenar durumlar |
 |---|---|---|---|
 | `GET /api/people` | `Kisi[]` | — | Ayrılanlar dahil (rapor kullanır) |
-| `POST /api/people` | `201`/`200 Kisi` | boş `ad` 400; geçersiz `rol` 400 | `yildiz` kırpılır; `renk` sunucu atar |
+| `POST /api/people` | `200 Kisi` | boş ya da metin olmayan `ad` 400 | geçersiz `rol` misafir sayılır (sözleşme + mock; 16.3 madde 7 kararı); metin olmayan `kurum`/`not` yok sayılır; `yildiz` kırpılır; `renk` sunucu atar |
 | `PATCH /api/people/{id}` | `Kisi` | 404 | `renk`/`kisiId` yok sayılır; kartı varsa `/state` hemen güncellenir |
-| `DELETE /api/people/{id}` | `{ok:true}` | 404 | Kartı varsa önce iade; süreleri silinsin mi → Soru 4 (varsayılan: **silinmez**, kişi `silindi` işaretlenir) |
+| `DELETE /api/people/{id}` | `{ok:true}` | 404 | Kartı varsa önce iade; kişi listeden çıkar, süreleri **silinmez** (Soru 4 varsayılanı) |
 | `POST /api/people/import` (`text/csv`) | `{eklenen, atlanan[]}` | boş gövde 400 | ayraç `; , \t` ilk satırdan; başlık Türkçe/harfsiz; tırnak+`""`; BOM atılır; yinelenen ad+kurum atlanır; her zaman UTF-8 gelir |
 | `POST /api/assign {kisiId, kart}` | `{ok:true}` | 404 kişi yok; 400 kart 1–99 değil / baştaki sıfırlı | Kart başkasındaysa eski atama kapanır (`ayrildi` **değişmez**); kişinin başka kartı varsa değişim (kenarlar birleşir, açık çiftler kapanır); `ayrildi=false`; `kart:N` kayıtları kişiye geçer; geçmişe `ata`/`degisim` yazılır |
-| `POST /api/unassign {kart, ayrildi?}` | `{ok:true}` | 400 geçersiz no; 404 kart atanmamış | `ayrildi` varsayılan `true`; `false` = geri al; açık çift kapatılır; süreler **silinmez**; geçmişe `iade`/`geri_al` |
+| `POST /api/unassign {kart, ayrildi?}` | `{ok:true}` | 400 geçersiz no; 404 kart hiç bilinmiyor (kimsede değil, alıcı hiç duymadı) | Kişisi olmayan ama duyulan kart da iade edilebilir (masaya döner); `ayrildi` varsayılan `true`; `false` = geri al; açık çift kapatılır; süreler **silinmez**; geçmişe `iade`/`geri_al` |
 | `GET /api/cards` | `[{kart, rssiAlici, seenAgo, atanan, pil}]` | — | Alıcının duyduğu **tüm** kartlar (atanmış, yedek, iade dönmüş); 100+ dahil olabilir; 1–3 sn'de bir yoklanır → ucuz olmalı |
 | `GET /api/sessions` | `[{a, b, start, end}]` | — | kişi kimliği ya da `"kart:N"`; etkinlik saniyesi, 1 ondalık; `end:null` sürüyor |
 | `GET /api/assignments` | `[{t, kisiId, kart, islem}]` | — | **Yeni**; arayüz "Geri al"ı buna taşıyacak (ayrı arayüz işi) |
@@ -489,7 +499,7 @@ CREATE TABLE ayar      (anahtar TEXT PRIMARY KEY, deger TEXT);               -- 
 
 Durum işaretleri: ⬜ onay bekliyor · 🟡 devam ediyor · ✅ bitti ve onaylandı
 
-### 🟡 Faz B — Gerçek sunucu (Python) (planlandı 03.10.2026; B0 bitti 04.10.2026, B1 ve B2 bitti 05.10.2026, sonraki fazlar ayrı onayla)
+### 🟡 Faz B — Gerçek sunucu (Python) (planlandı 03.10.2026; B0 bitti 04.10.2026, B1–B3 bitti 05.10.2026, sonraki fazlar ayrı onayla)
 
 **Amaç:** Arayüzün mock'tan aldığı her şeyi gerçek bir sunucudan, aynı sözleşmeyle vermek. Gerekçe, mimari, veri modeli ve
 kurallar Bölüm 1–13'te; **burası uygulama sırası ve kabul ölçütleridir.** Her B fazı ayrı onayla başlar (Bölüm 0.1), kendi
@@ -601,7 +611,15 @@ commit'lerini alır, sonunda `docs/Bn_NOT.md` yazılır. Süreler tek kişi, tam
   kabul ölçütleri; alıcı kopması penceresinde (120. sn) "ALICI BAĞLI DEĞİL" bandı çıkıyor ve "bağlanılamıyor" **çıkmıyor**
   (yayın 2 Hz sürüyor); 1,5 sn'de ≥2 SSE mesajı; eşik kaydırıcısı değiştirip geri okuyor.
 
-#### B3 ⬜ Kişi kayıt defteri + atama + CSV (tahmin: 3 gün) — karşılama masası gerçek sunucuyla
+#### B3 ✅ Kişi kayıt defteri + atama + CSV (tahmin: 3 gün) — bitti ve onaylandı (05.10.2026)
+- **Yapıldı** (ayrıntı ve gerekçeler: `docs/B3_NOT.md`):
+  - `kisi.py` (tam), `atama.py` (ata / iade / geri al / değişim + atama geçmişi kaydı), `csv_ice.py`, `api_uclari.py`;
+    benzetime haber (`kart_ver` / `kart_al`). `semalar.py` yok: gövdeler elle ayrıştırılıyor (16.3 madde 5).
+  - 16.3 madde 7 sözleşme belgesine göre çözüldü (geçersiz rol misafir; DELETE listeden çıkarır, süreler kalır).
+  - Yolda bulunan hata: görüştüğü kimsesiz kartı kendine alan kişinin süresi iki kez sayılıyordu — düzeltildi, testli.
+  - Kabul ✅ `pytest` 353/353; mock'un api / degisim / iade / iceaktar senaryoları Python'da; tarayıcıda masa akışları 10/10.
+    ⚠️ Faz 2'nin `/api/cards`'a bağlı maddeleri (yaklaştır ve tanı, boştaki kartlar, kayıp kart şeridi, "bu kart şu an …"
+    uyarısı) B4'te.
 - `cekirdek/kisi.py` (kayıt, renk ataması brief §10 paleti, doğrulama/kırpma), `cekirdek/atama.py` (ata / iade / geri al /
   değişim; kart başkasındaysa eski atama kapanır, `ayrildi` değişmez; kişinin başka kartı varsa değişim → kenarlar birleşir,
   `kart:N` kayıtları kişiye geçer; iade/değişimde açık çift kapatılır, eşi serbest), `cekirdek/csv_ice.py` (ayraç `; , \t`,
@@ -733,6 +751,8 @@ bölümleri değiştirilmedi. Madde 6 karara bağlandı (04.10.2026); diğerleri
    yaşama ayrıntısı B6'da.
 7. **Durum kodu sapmaları (Bölüm 8.2 ↔ mock).** Geçersiz `rol` (plan 400; mock `guest` yapıp 200), atanmamış ama bilinen kartın
    iadesi (plan 404; mock 200), `DELETE` (plan `silindi` işareti; mock kaydı siler).
+   **Karar (B3, 05.10.2026):** sözleşme belgesi (`SUNUCUDAN_ISTENENLER.md`) ve mock aynı yönde; sözleşmenin tek kaynağı o
+   belge olduğu için mock davranışı uygulandı, Bölüm 8.2 düzeltildi. DELETE kişiyi listeden çıkarır, süreleri silinmez.
 8. **Yedek kart varsayılanı (R7).** Mock'ta yedekler benzetime hiç girmiyor, Kart 14 ise 45. sn'de zamanlayıcıyla ekleniyor;
    "görüşmeye girince eklenir" mock davranışı değil. Gerçekte masada yan yana duran açık yedekler birbirini güçlü duyup
    "birlikte" sayılabilir → Soru 1–2'nin cevabı B4'ten önce gerekli.
