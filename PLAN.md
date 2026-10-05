@@ -414,6 +414,11 @@ CREATE TABLE ayar      (anahtar TEXT PRIMARY KEY, deger TEXT);               -- 
   Hedef: tik işleme < 50 ms, JSON < 20 ms. Ölçüm B7'de; aşarsa seçenekler sırayla: (a) `history` yalnız son 90 sn ve 2 sn kovalı (zaten),
   (b) `history`'yi yalnız bir Kurulum istemcisi bağlıyken göndermek (`/events?teknik=1` isteğe bağlı parametre — arayüz değişikliği
   gerektirir, ayrı karar), (c) ölçüm penceresini `collections.deque` ile O(1) tutmak.
+  **Ölçüm (B1 incelemesi, 05.10.2026):** benzetimde duyulan çift sayısı etkinlik boyunca büyür (ayrılan çiftler birbirini zayıf
+  duymaya devam eder): 97 kartta 1 saatte ~320, 3 saatte ~850. Bu yükte sinyal çekirdeği tik başına ~28 ms; bunun ~23 ms'si
+  grafik serisi (her tikte ~38 bin kova; kovalar "şimdi"ye göre olduğu için önbelleğe alınamaz). Motor, bildirimler ve JSON
+  eklenince 50 ms aşılabilir → (b) seçeneği B7'ye değil **B2 tasarımına** girdi. Gerçek donanımda salondaki bütün kartlar
+  birbirini duyarsa çift sayısı daha da büyük olabilir (97 kartta en çok 4656) — Soru 11 (seri biçim) ile birlikte bakılmalı.
 - **Seri hacmi:** 97 kart × saniyede birkaç paket × duyduğu komşular → saniyede birkaç bin ölçüm; ayrıştırma thread'de, çekirdeğe toplu teslim (tik başına liste).
 
 ---
@@ -528,11 +533,15 @@ commit'lerini alır, sonunda `docs/Bn_NOT.md` yazılır. Süreler tek kişi, tam
     B2'ye kadar etkisiz** (kaynağı motor çalıştıracak).
   - B1.5 ✅ `SinyalDeposu`: değerler yuvarlanmadan tutulur (yuvarlama B2'de yayın katmanında); hem son ölçümü hem
     ortancayı verir (16.3 madde 1 kararı B2'de).
-  - Kabul ✅ `pytest` 130/130; 60 sn'de sinyal sayısı 9,07 (mock 8,80; +%3,1), grafik uzunluğu 18,19 (mock 18,41; −%1,2);
+  - İnceleme ✅ Dal bağımsız incelemeden geçti (Opus): bir kritik bulgu (`--kaydet` var olan dosyayı, `--iz` ile aynıysa
+    oynatılacak izi siliyordu) ve sekiz önemli bulgu bu dalda düzeltildi. En büyüğü hız: 97 kart / 850 çift yükünde sinyal
+    çekirdeği tik başına 66 → 28 ms. Ertelenen küçük bulgular ve B2 notları `docs/B1_NOT.md`'de.
+  - Kabul ✅ `pytest` 168/168; 60 sn'de sinyal sayısı 9,07 (mock 8,80; +%3,1), grafik uzunluğu 18,19 (mock 18,41; −%1,2);
     kayıt → oynatma 400 tikte birebir aynı sinyal dizisi.
 - **B1.1** `giris/paket.py`: `Paket{kart: str, duyulanlar: [(kart, rssi)], pil: int|None, t: float}` dataclass; 100+ kart
   işaretlenir ama **atılmaz** (`/api/cards` için). Ayrıştırıcı **yok** (biçim bilinmiyor) — `SeriKaynak` B8'de.
-- **B1.2** `giris/kaynak.py`: `PaketKaynagi` arayüzü (`async def paketler() -> AsyncIterator[list[Paket]]`, tik başına liste).
+- **B1.2** `giris/kaynak.py`: `PaketKaynagi` arayüzü (`def tikler() -> AsyncGenerator[Tik, None]`; `Tik` = tik anı + o tikin
+  paketleri — ilk yazımda `list[Paket]` idi, 04.10.2026'da değişti, gerekçe yukarıda).
 - **B1.3** `giris/benzetim.py`: mock `tik()` dinamiğinin Python'u — aynı tohumlu RNG değil, **aynı senaryo zamanlaması**:
   Kart 14 → 45. sn, kayıp kart → 180–300. sn, alıcı kopması → 120. sn ve her 360 sn (`--kopma=0` ile kapalı), yedek kartlar
   (6 adet, masada), `--kisi` (≤97), `--hizlandir`. Ad/kurum listeleri mock'tan. Böylece arayüzün Faz 2–5 kabul betikleri
@@ -665,6 +674,8 @@ Hiçbiri B0–B2'yi engellemez; varsayılanlar bu belgededir. Soru 1–6'nın ta
       bu dosyaya yönlendirilmesi SaasBridge reposunda ayrı onayla.
 - [ ] B0 incelemesinden ertelenen küçük işler (B2 öncesi: açılış satırı ve uçların kayıt sırası; B7: Windows provası,
       `baslat.bat`, `wheelhouse/`): `docs/B0_NOT.md` → "Ertelenen küçük bulgular".
+- [ ] B1 incelemesinden B2'ye kalanlar (kayıt bitince yayının sürmesi, etkinlik saati ↔ kaynak saati, `--tohum`, tik kadansı)
+      ve ertelenen küçük bulgular: `docs/B1_NOT.md` → "B2 için notlar", "Ertelenen küçük bulgular".
 
 ### 16.3 Plan ↔ kod çelişkileri (analiz 03.10.2026; karar bekliyor)
 Bu plan ile `SaasBridge` kodu (mock ve testleri) karşılaştırılınca çıkanlar. Hiçbiri henüz karara bağlanmadı; planın ilgili
@@ -692,6 +703,8 @@ bölümleri değiştirilmedi. Madde 6 karara bağlandı (04.10.2026); diğerleri
 8. **Yedek kart varsayılanı (R7).** Mock'ta yedekler benzetime hiç girmiyor, Kart 14 ise 45. sn'de zamanlayıcıyla ekleniyor;
    "görüşmeye girince eklenir" mock davranışı değil. Gerçekte masada yan yana duran açık yedekler birbirini güçlü duyup
    "birlikte" sayılabilir → Soru 1–2'nin cevabı B4'ten önce gerekli.
+   **Not (B1, 05.10.2026):** bu durum benzetimde üretilemiyor: masadaki yedekler paket yollar ama kimseyle ölçülmez (mock ile
+   aynı). B4 kabulü için ya gerçek donanım ya da yedeklerin birbirini duyduğu yeni bir benzetim ayarı gerekecek.
 
 ---
 
