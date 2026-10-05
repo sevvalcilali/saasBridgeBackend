@@ -14,7 +14,7 @@ Arayüzün (https://github.com/sevvalcilali/SaasBridge) gerçek sunucusu: alıc�
 - B2 (canlı durum: `/state`, `/events`, `/control`) bitti ve onaylandı: Pano, Kurulum ve Sunum benzetimle canlı veri
   alıyor (`docs/B2_NOT.md`).
 - B3 (karşılama masası: kişiler, CSV, kart verme / iade / değişim) bitti ve onaylandı (`docs/B3_NOT.md`). Kart listesi
-  (`/api/cards`) B4'te yazıldı, onay bekliyor (`docs/B4_NOT.md`); görüşme kayıtları ve rapor B5'te.
+  (`/api/cards`) B4'te geldi (`docs/B4_NOT.md`); görüşme kayıtları ve rapor B5'te.
 - Donanım (kartlar + alıcı) var ve test edildi; gerçek alıcıya bağlama B8'de.
 
 Teknoloji: Python 3.11+, FastAPI + uvicorn, pyserial, SQLite (stdlib).

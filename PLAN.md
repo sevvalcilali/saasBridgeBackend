@@ -20,7 +20,7 @@
   derlenmiş arayüzü ve `/api/health`'i veriyor; veri uçları yok. B1 (giriş katmanı + sinyal) bitti ve onaylandı (05.10.2026; `docs/B1_NOT.md`). B2 (canlı durum) bitti ve onaylandı
   (05.10.2026; `docs/B2_NOT.md`): Pano, Kurulum ve Sunum gerçek sunucudan (benzetim) canlı veri alıyor.
   B3 (karşılama masası) bitti ve onaylandı (05.10.2026; `docs/B3_NOT.md`).
-  B4 (`/api/cards`) kodu yazıldı — `b4-kartlar` dalında, onay bekliyor (`docs/B4_NOT.md`). Sıradaki: B5 (görüşme kayıtları, rapor).
+  B4 (`/api/cards`) bitti ve onaylandı (`docs/B4_NOT.md`). Sıradaki: B5 (görüşme kayıtları, rapor).
 - **Çalıştırma:** `./baslat.sh` (ya da `.venv/bin/python -m yakinlik`) → `http://localhost:8002`; testler `.venv/bin/pytest`.
 - **Kardeş repo:** https://github.com/sevvalcilali/SaasBridge — arayüz, mock sunucu (`mock-server/mock.js`, davranışın çalışan
   şartnamesi), sözleşme belgesi (`SUNUCUDAN_ISTENENLER.md`), gereksinim belgesi (`UI_TASARIM_BRIEF.md` §2, §5, §9).
@@ -499,7 +499,7 @@ CREATE TABLE ayar      (anahtar TEXT PRIMARY KEY, deger TEXT);               -- 
 
 Durum işaretleri: ⬜ onay bekliyor · 🟡 devam ediyor · ✅ bitti ve onaylandı
 
-### 🟡 Faz B — Gerçek sunucu (Python) (planlandı 03.10.2026; B0 bitti 04.10.2026, B1–B3 bitti 05.10.2026, sonraki fazlar ayrı onayla)
+### 🟡 Faz B — Gerçek sunucu (Python) (planlandı 03.10.2026; B0 bitti 04.10.2026, B1–B4 bitti 05.10.2026, sonraki fazlar ayrı onayla)
 
 **Amaç:** Arayüzün mock'tan aldığı her şeyi gerçek bir sunucudan, aynı sözleşmeyle vermek. Gerekçe, mimari, veri modeli ve
 kurallar Bölüm 1–13'te; **burası uygulama sırası ve kabul ölçütleridir.** Her B fazı ayrı onayla başlar (Bölüm 0.1), kendi
@@ -629,7 +629,7 @@ commit'lerini alır, sonunda `docs/Bn_NOT.md` yazılır. Süreler tek kişi, tam
 - **Kabul:** `mock-server/{api,degisim,iade,iceaktar}.test.js` senaryoları `tests/`'te yeşil ve `SUNUCU=` ile de yeşil;
   tarayıcıda **Faz 2 kabul akışı 11/11** (kart ver / değiştir / iade / geri al / CSV / kayıp kart) gerçek sunucuyla.
 
-#### B4 🟡 Kartlar — `GET /api/cards` (tahmin: 1–2 gün) — kod bitti (05.10.2026, dal `b4-kartlar`), onay bekliyor
+#### B4 ✅ Kartlar — `GET /api/cards` (tahmin: 1–2 gün) — bitti ve onaylandı (05.10.2026)
 - **Yapıldı** (`docs/B4_NOT.md`): `/api/cards` (duyulan bütün kartlar; en yeni paketten pil ve alıcı gücü); paketlere
   `alici_rssi` (eski izler uyumlu). B3+B4 bağımsız incelemesi: kritik yok; iade edilen kişisiz kartın süresinin sonraki
   sahibe geçmesi ve dört küçük bulgu düzeltildi. `pytest` 364/364. Tarayıcı doğrulaması B5 ile.

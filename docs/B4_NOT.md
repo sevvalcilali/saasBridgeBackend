@@ -1,6 +1,6 @@
 # B4 — Kartlar (`GET /api/cards`): teslim notu
 
-> 05.10.2026 · dal `b4-kartlar` · Durum: **kod bitti; inceleme (B3 ile birlikte) ve Şevval'in onayı bekleniyor**
+> 05.10.2026 · dal `b4-kartlar` · Durum: **bitti — B3 ile birlikte incelendi, Şevval onayladı (05.10.2026)**
 
 - `GET /api/cards`: alıcının duyduğu bütün kartlar (atanmış, masadaki yedek, iade dönmüş, 100+ dinleyici), numara
   sırasıyla; her kartta `rssiAlici` (alıcının duyduğu güç), `seenAgo`, `atanan` (kisiId), `pil` — en yeni paketten.
