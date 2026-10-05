@@ -307,9 +307,9 @@ saasBridgeBackend/
 |---|---|---|
 | Çift anahtarı | `"küçükNo-büyükNo"` | brief §5.1 |
 | Ölçüm | her paketten `ab`, `ba` (biri eksikse `null`), `value` = ikisi varsa ortalama yoksa olan | brief §5.1 |
-| Karşılaştırılan değer | son **10 sn** ölçümlerinin **ortancası** (bkz. Bölüm 16.3 madde 1) | `SUNUCUDAN_ISTENENLER.md` §5 (kalibrasyon bunu ölçer) |
+| Karşılaştırılan değer | son **10 sn** ölçümlerinin **ortancası**; "birlikte" kararı da bu değerle verilir | `SUNUCUDAN_ISTENENLER.md` §5 (kalibrasyon bunu ölçer); Bölüm 16.3 madde 1 kararı |
 | Eşik | varsayılan −72 dBm; `/control threshold` −100…−20; **kalıcı** | brief §2, §5 |
-| Giriş gecikmesi | 5 sn kesintisiz üstte → `together = true`, görüşme kaydı açılır | brief §2 |
+| Giriş gecikmesi | **60 sn** kesintisiz üstte → `together = true`. Bekleme süresi görüşmeye sayılır: süre, kenar dakikası ve görüşme kaydı eşiğin aşıldığı andan başlar | **Şevval, 05.10.2026** (brief §2'deki 5 sn yerine: saniyeler çok az veri) |
 | Çıkış gecikmesi | 15 sn kesintisiz altta → `together = false`, kayıt kapanır, `stats.done++` | brief §2 |
 | `signals[].n` | 10 sn penceresindeki ölçüm sayısı | brief §5.1 |
 | `history` | son 90 sn, 2 sn'lik kovaların ortancası, en eski başta, `[snÖnce, dBm]` | brief §5.1 |
@@ -685,6 +685,10 @@ bölümleri değiştirilmedi. Madde 6 karara bağlandı (04.10.2026); diğerleri
 
 1. **"Birlikte" kararı.** Bölüm 7 son 10 sn ortancası diyor; mock kararı **son ölçümle** veriyor (`mock.js:485`), ortanca yalnız
    `signals[].value` ve `above` için kullanılıyor. Hangisi esas?
+   **Karar (05.10.2026, Şevval):** eşikle **10 sn ortancası** karşılaştırılır; ortanca eşiğin üstünde **kesintisiz 1 dakika**
+   kalınca "birlikte" denir (1 dakikadan kısa yan yana gelişler sayılmaz). Bekleme dakikası görüşmeye sayılır. Çıkış kuralı
+   aynı: 15 sn altta → biter. Arayüzde "5 sn" yazan iki metin (Rapor dipnotu, Kurulum çift tablosu) ve mock'un `GIRIS_SN`'i
+   SaasBridge reposunda ayrı onayla güncellenecek.
 2. **Mock'a özgü uçlara bağlı testler.** `kalibrasyon.test.js` (tamamı `/api/demo/tut`), `saglamlik.test.js` (`/api/demo` 200
    bekliyor), `cards.test.js` ve `inceleme.test.js` gerçek sunucuda geçemez; B2 ve B4 kabul listeleri buna göre düzeltilmeli.
 3. **`SUNUCU=` tek adres yetmez.** 11 test dosyası 14 ayrı mock'u farklı bayraklarla (`--hizlandir`, `--anlasmaSn`, `--tohum`,
