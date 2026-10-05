@@ -101,6 +101,14 @@ def test_alici_kopunca_paket_gelmez_ama_tikler_surer():
     assert bos == [120.5 + i * 0.5 for i in range(40)] + [480.5 + i * 0.5 for i in range(40)]
 
 
+def test_hizlandirilinca_kopma_en_az_dort_tik_surer():
+    # Mock: kopma süresi max(20, tik × 4). 60 kat hızda tik 30 benzetim sn'dir; kopma 20 sn sürseydi
+    # tek tikte atlanır, arayüzdeki "ALICI BAĞLI DEĞİL" bandı hızlandırılmış denemede hiç görünmezdi.
+    tikler = kos(Benzetim(kisi=25, tohum=1), 600.0, dt=30.0)
+
+    assert [tik.t for tik in tikler if not tik.paketler] == [150.0, 180.0, 210.0, 240.0, 510.0, 540.0, 570.0, 600.0]
+
+
 def test_kopma_kapaliyken_bos_tik_olmaz():
     tikler = kos(Benzetim(kisi=25, tohum=1, kopma=False), 145.0)
 
@@ -111,18 +119,65 @@ def test_kopma_kapaliyken_bos_tik_olmaz():
 
 def test_konusan_cift_guclu_ayrilan_cift_zayif_duyulur():
     benzetim, depo = Benzetim(kisi=25, tohum=1, kopma=False), SinyalDeposu()
-    ilk_deger, son_deger = {}, {}
+    ilk_deger, son_deger, an = {}, {}, {}
     for tik in kos(benzetim, 16 * 60):
+        an[tik.t] = tik
         depo.ekle(tik.paketler)
         for sinyal in depo.sinyaller(tik.t):
             ilk_deger.setdefault((sinyal.a, sinyal.b), sinyal.value)
             son_deger[(sinyal.a, sinyal.b)] = sinyal.value
         depo.unut(tik.t)
+    # 180. sn'de susan kartın çiftleri zorla ayrılır; görüşme süresinin kendisini sınamak için onları ayır.
+    (susan,) = gonderenler(an[179.5]) - gonderenler(an[180.0])
+    kendiliginden = [deger for cift, deger in son_deger.items() if susan not in cift]
 
     assert all(deger > -70.0 for deger in ilk_deger.values())  # çift, yan yana gelince duyulmaya başlar
     assert all(deger > GUCLU or deger < ZAYIF for deger in son_deger.values())
-    assert any(deger > GUCLU for deger in son_deger.values())
-    assert any(deger < ZAYIF for deger in son_deger.values())  # görüşmeler en çok 14 dk sürer: ayrılanlar var
+    assert any(deger > GUCLU for deger in kendiliginden)
+    assert any(deger < ZAYIF for deger in kendiliginden)  # görüşmeler 2–14 dk sürer: süresi dolup ayrılanlar var
+
+
+def test_hicbir_gorusme_14_dakikadan_uzun_surmez():
+    # Mock: her çiftin yan yana kalma süresi 2–14 dk arası rastgele. Görüşme, çift ilk güçlü ölçüldüğü andan
+    # ayrıldığı (zayıf ölçüldüğü) ana kadar sürer. Tek tikte gürültüyle güçlü ölçüm düşebilir (ya da o yön
+    # gelmeyebilir); bu görüşmeyi bölmez, yalnız zayıf ölçüm (ayrılık) böler.
+    en_uzun = 0.0
+    for tohum in range(3):
+        baslangic = {}
+        for tik in kos(Benzetim(kisi=25, tohum=tohum, kopma=False), 40 * 60):
+            guclu, zayif = set(), set()
+            for paket in tik.paketler:
+                for diger, rssi in paket.duyulanlar:
+                    if rssi > -62.0:
+                        guclu.add(frozenset((paket.kart, diger)))
+                    elif rssi < ZAYIF:
+                        zayif.add(frozenset((paket.kart, diger)))
+            for cift in zayif:
+                baslangic.pop(cift, None)
+            for cift in guclu:
+                en_uzun = max(en_uzun, tik.t - baslangic.setdefault(cift, tik.t))
+
+    assert 10 * 60 < en_uzun <= 14 * 60
+
+
+def test_yatirimci_ile_girisimci_birbirini_daha_cok_bulur():
+    # Mock: boştaki kart %70 olasılıkla karşı rolden birini seçer. Bu eğilim pano istatistiklerini (karma
+    # görüşme, yatırımcıya ulaşan girişimci) ve anlaşma bildirimlerini besler. Eğilim varken çiftlerin
+    # ~%65'i yatırımcı–girişimci, yokken ~%40 (20 tohum × 15 dk ile ölçüldü, 04.10.2026).
+    karma = toplam = 0
+    for tohum in range(20):
+        benzetim = Benzetim(kisi=25, tohum=tohum, kopma=False)
+        rol = {kisi.kart: kisi.rol for kisi in benzetim.kadro}
+        bulusan = set()
+        for tik in kos(benzetim, 15 * 60):
+            bulusan |= {
+                frozenset((paket.kart, diger)) for paket in tik.paketler for diger, rssi in paket.duyulanlar
+                if rssi > -62.0 and paket.kart in rol and diger in rol
+            }
+        toplam += len(bulusan)
+        karma += sum({rol[x] for x in cift} == {"investor", "founder"} for cift in bulusan)
+
+    assert karma / toplam > 0.52
 
 
 def test_bir_kart_ayni_anda_tek_kartla_yan_yanadir():
