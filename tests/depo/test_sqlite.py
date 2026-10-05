@@ -329,3 +329,17 @@ def test_yeni_etkinlikte_yedek_klasoru_yazilamazsa_anlasilir_hata_eski_veri_yeri
     (klasor / "yedek").unlink()
 
     assert kalici_gorunum(Depo.ac(klasor, salon.duvar + 5).yukle(salon.duvar + 5).alan()) == kalici_gorunum(salon.alan)
+
+
+def test_bu_sunucuya_ait_olmayan_veritabani_reddedilir_ve_degistirilmez(klasor):
+    klasor.mkdir()
+    yabanci = sqlite3.connect(klasor / DOSYA)
+    yabanci.execute("CREATE TABLE baska (x)")
+    yabanci.commit()
+    yabanci.close()
+    once = (klasor / DOSYA).read_bytes()
+
+    with pytest.raises(ValueError, match="ait değil"):
+        Depo.ac(klasor, DUVAR)
+
+    assert (klasor / DOSYA).read_bytes() == once

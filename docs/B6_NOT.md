@@ -1,6 +1,6 @@
 # B6 — Kalıcılık ve sıfırlama: teslim notu
 
-> 05.10.2026 · dal `b6-kalicilik` · Durum: **bitti; Şevval'in onayı bekleniyor** (B5+B6 bağımsız incelemesi yapıldı)
+> 05.10.2026 · dal `b6-kalicilik` · Durum: **bitti — Şevval onayladı (05.10.2026)** (B5+B6 bağımsız incelemesi yapıldı)
 
 - **Ne kalıcı:** kişiler (silinenler işaretli), açık atamalar ve atama geçmişi, görüşme kayıtları, kim kimle kaç dakika,
   bildirimler, anlaşmalar, eşik, etkinlik saati. Tek dosya: `veri/yakinlik.sqlite` (SQLite, WAL). Her tikten ve her masa

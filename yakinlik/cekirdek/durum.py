@@ -65,10 +65,12 @@ def kartlar_uret(alan: Alan) -> list[dict]:
     return sonuc
 
 
-def durum_uret(alan: Alan, etkinlik: Etkinlik, duvar: float) -> dict:
+def durum_uret(alan: Alan, etkinlik: Etkinlik, duvar: float, grafik: bool = True) -> dict:
+    """`grafik=False`: `history` boş gelir ve hesaplanmaz (büyük etkinlikte durumun en pahalı ve en büyük parçası;
+    yalnız Kurulum grafiği kullanır — B7, Şevval kararı 05.10.2026)."""
     simdi = alan.t
     sinyaller = [] if simdi is None else alan.sinyal.sinyaller(simdi)
-    gecmis = {} if simdi is None else alan.sinyal.gecmis(simdi)
+    gecmis = {} if simdi is None or not grafik else alan.sinyal.gecmis(simdi)
     birlikte = alan.birlikte_ciftler()
 
     sahne = alan.sahnedeki_kartlar()

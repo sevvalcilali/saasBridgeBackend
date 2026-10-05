@@ -17,7 +17,7 @@ from .ayar import Ayar, veri_klasoru
 from .cekirdek import atama
 from .cekirdek.alan import Alan
 from .cekirdek.csv_ice import AktarmaSonucu, iceri_aktar
-from .cekirdek.durum import Etkinlik, atamalar_sozluk, durum_uret, kartlar_uret, oturumlar_sozluk
+from .cekirdek.durum import Etkinlik, atamalar_sozluk, durum_uret, js_yuvarla, kartlar_uret, oturumlar_sozluk
 from .cekirdek.kisi import Kisi, KisiDefteri
 from .depo.sqlite import Depo
 from .giris.benzetim import Benzetim
@@ -35,11 +35,13 @@ class SifirlamaHatasi(Exception):
 
 
 class Abone:
-    """Bir canlı akış (SSE) izleyicisi: sırasını bekleyen mesajlar."""
+    """Bir canlı akış (SSE) izleyicisi: sırasını bekleyen mesajlar. `grafik`: Kurulum grafiğinin verisini (history)
+    istiyor mu (Pano, Sunum istemez: durumun ~%60'ı)."""
 
-    def __init__(self) -> None:
+    def __init__(self, grafik: bool = True) -> None:
         self._kuyruk: asyncio.Queue[bytes | None] = asyncio.Queue(maxsize=EN_COK_BEKLEYEN)
         self.kapandi = False
+        self.grafik = grafik
 
     def ver(self, veri: bytes) -> bool:
         try:
@@ -86,7 +88,10 @@ class Motor:
         self._depo = depo
         self._yazilamiyor = False
         self._aboneler: set[Abone] = set()
-        self.anlik = self._uret()  # son durum, JSON baytları (GET /state bunu verir)
+        # Son durumun JSON baytları: grafiksiz her tikte; grafikli yalnız isteyen izleyici varsa ya da istenince.
+        self._grafiksiz = b"{}"
+        self._grafikli: bytes | None = None
+        self._guncelle()
         self._kaydet()  # yeni dosyada başlangıç kadrosu, yüklenen dosyada kapatılan görüşmeler hemen diske
 
     @classmethod
@@ -136,10 +141,13 @@ class Motor:
 
     def isle(self, tik: Tik) -> None:
         """Bir tiki işleyip yayınlar. Hata fırlatmaz: tek bozuk tik ne kaynağı ne de yayını düşürür."""
+        onceki = len(self._alan.bildirimler)
         try:
             self._alan.tik(tik, self._saat.simdi())
         except Exception:
             gunluk.exception("tik işlenemedi (t=%s); yayın sürüyor", tik.t)
+        for yeni in self._alan.bildirimler[onceki:]:
+            gunluk.info("bildirim: %s — %s", yeni.title, yeni.detail)
         self._kaydet()
         self._yayinla()
 
@@ -251,13 +259,42 @@ class Motor:
         """Sunucu kapanırken: son hal diske yazılır, veri dosyası bırakılır."""
         if self._depo is not None:
             self._kaydet()
+            if self._yazilamiyor:
+                gunluk.error("kapanırken veri diske yazılamadı (%s): son başarılı yazımdan bu yana olanlar kayboldu",
+                             self._depo.yol)
             self._depo.kapat()
             self._depo = None
 
-    def abone_ol(self) -> Abone:
-        abone = Abone()
+    def saglik(self) -> dict:
+        """Operatör için (GET /api/health; arayüz kullanmaz): alıcı yaşı, canlı akış izleyicisi, diske yazım."""
+        yas = None if self._alan.t is None else self._alan.sinyal.alici_yasi(self._alan.t)
+        return {
+            "receiverAge": None if yas is None else js_yuvarla(yas, 1),
+            "istemci": len(self._aboneler),
+            "veri": None if self._depo is None else {"dosya": str(self._depo.yol), "yaziliyor": not self._yazilamiyor},
+        }
+
+    def abone_ol(self, grafik: bool = True) -> Abone:
+        abone = Abone(grafik)
         self._aboneler.add(abone)
         return abone
+
+    def durum_baytlari(self, grafik: bool) -> bytes:
+        """Son durum (GET /state, canlı akışın ilk mesajı). Grafikli hal bu tikte üretilmediyse şimdi üretilir."""
+        if not grafik:
+            return self._grafiksiz
+        if self._grafikli is None:
+            try:
+                self._grafikli = self._uret(grafik=True)
+            except Exception:
+                gunluk.exception("durum üretilemedi; grafiksiz son durum gönderiliyor")
+                return self._grafiksiz
+        return self._grafikli
+
+    @property
+    def anlik(self) -> bytes:
+        """Son tam durum (grafik dahil)."""
+        return self.durum_baytlari(grafik=True)
 
     def ayril(self, abone: Abone) -> None:
         self._aboneler.discard(abone)
@@ -278,24 +315,33 @@ class Motor:
                 gunluk.warning("veri yeniden diske yazılabiliyor")
             self._yazilamiyor = False
 
-    def _uret(self) -> bytes:
-        durum = durum_uret(self._alan, self._etkinlik, self._saat.simdi())
-        return json.dumps(durum, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    def _uret(self, grafik: bool) -> bytes:
+        return _json(durum_uret(self._alan, self._etkinlik, self._saat.simdi(), grafik))
 
     def _guncelle(self) -> None:
-        """Son durumu yeniden üretir; üretilemezse öncekini tutar (izleyiciler son geçerli durumu almaya devam eder)."""
+        """Son durumu yeniden üretir (bir kez; grafikli JSON yalnız isteyen izleyici varsa). Üretilemezse öncekini tutar
+        (izleyiciler son geçerli durumu almaya devam eder)."""
+        grafik = any(abone.grafik for abone in self._aboneler)
         try:
-            self.anlik = self._uret()
+            durum = durum_uret(self._alan, self._etkinlik, self._saat.simdi(), grafik)
+            grafiksiz = _json({**durum, "history": {}})
+            grafikli = _json(durum) if grafik else None
         except Exception:
             gunluk.exception("durum üretilemedi; son geçerli durum gönderiliyor")
+            return
+        self._grafiksiz, self._grafikli = grafiksiz, grafikli
 
     def _yayinla(self) -> None:
         self._guncelle()
         for abone in list(self._aboneler):
-            if not abone.ver(self.anlik):
+            if not abone.ver(self.durum_baytlari(abone.grafik)):
                 gunluk.warning("canlı akış izleyicisi yetişemiyor; bağlantısı kapatıldı")
                 abone.kapat()
                 self._aboneler.discard(abone)
+
+
+def _json(durum: dict) -> bytes:
+    return json.dumps(durum, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
 
 
 def _benzetimi_esitle(benzetim: Benzetim, defter: KisiDefteri) -> None:

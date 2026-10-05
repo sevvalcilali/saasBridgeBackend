@@ -1,0 +1,3 @@
+# Windows betikleri CRLF ile, POSIX betikleri LF ile kalsın (yanlış satır sonunda çalışmazlar).
+*.bat text eol=crlf
+*.sh  text eol=lf

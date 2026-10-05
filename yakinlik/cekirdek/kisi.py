@@ -8,6 +8,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Protocol
 
+METIN_SINIRI = 200  # ad, kurum, not (PLAN Bölüm 11): pano ve rapor taşmasın
 ROL_SIRASI = ("investor", "founder", "guest")  # /state.people bu sırayla (yatırımcı → girişimci → misafir)
 # Brief §10 koyu paleti (mock ile aynı); açık tema uyarlaması arayüzde. Renk kişi doğarken atanır, değişmez.
 PALET = ("#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#9085e9", "#e66767")
@@ -46,6 +47,10 @@ class KadroKisisi(Protocol):
 
 def _metin(deger: object) -> str:
     return deger if isinstance(deger, str) else ""
+
+
+def _kirp(metin: str) -> str:
+    return metin[:METIN_SINIRI]
 
 
 def _tam_sayi(deger: object) -> int:
@@ -119,8 +124,8 @@ class KisiDefteri:
         self._sayac += 1
         rol = rol if rol in ROL_SIRASI else "guest"
         kisi = Kisi(
-            f"k{self._sayac}", _metin(ad).strip() or "İsimsiz", rol, _metin(kurum), _yildiz(rol, yildiz),
-            PALET[(self._sayac - 1) % len(PALET)], notu=_metin(notu),
+            f"k{self._sayac}", _kirp(_metin(ad).strip() or "İsimsiz"), rol, _kirp(_metin(kurum)), _yildiz(rol, yildiz),
+            PALET[(self._sayac - 1) % len(PALET)], notu=_kirp(_metin(notu)),
         )
         self._kisiler[kisi.kisi_id] = kisi
         return kisi
@@ -133,13 +138,13 @@ class KisiDefteri:
             return None
         ad = alanlar.get("ad")
         if isinstance(ad, str) and ad.strip():
-            kisi.ad = ad.strip()
+            kisi.ad = _kirp(ad.strip())
         if alanlar.get("rol") in ROL_SIRASI:
             kisi.rol = alanlar["rol"]
         if isinstance(alanlar.get("kurum"), str):
-            kisi.kurum = alanlar["kurum"]
+            kisi.kurum = _kirp(alanlar["kurum"])
         if isinstance(alanlar.get("not"), str):
-            kisi.notu = alanlar["not"]
+            kisi.notu = _kirp(alanlar["not"])
         kisi.yildiz = _yildiz(kisi.rol, alanlar["yildiz"] if "yildiz" in alanlar else kisi.yildiz)
         return kisi
 

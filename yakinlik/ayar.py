@@ -9,6 +9,8 @@ from pathlib import Path
 from .cekirdek.cift import ESIK_ARALIGI
 
 KAYNAKLAR = ("benzetim", "kayit", "seri")
+# Sunucu açılamadı: bekçi yeniden başlatmaz. uvicorn da açılamayınca (port dolu) 3 ile çıkar; argparse hatası 2.
+AYAR_HATASI_KODU = 3
 
 
 @dataclass(frozen=True)

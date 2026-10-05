@@ -72,7 +72,7 @@ def test_sanal_ortam_yokken_kurulur_ve_argumanlar_sunucuya_gecer(calistir):
     sonuc = calistir("--port", "8010")
 
     assert sonuc.returncode == 0, sonuc.stderr
-    assert sonuc.stdout.strip() == "SUNUCU -m yakinlik --port 8010"
+    assert sonuc.stdout.strip() == "SUNUCU -m yakinlik.bekci --port 8010"  # çökerse yeniden başlatan bekçi
 
 
 @pytest.mark.parametrize("python_var", [False, True], ids=["bos-klasor", "paketler-eksik"])
@@ -87,7 +87,7 @@ def test_yarim_kalmis_sanal_ortam_yeniden_kurulur(proje, calistir, python_var):
     sonuc = calistir()
 
     assert sonuc.returncode == 0, sonuc.stderr
-    assert sonuc.stdout.strip() == "SUNUCU -m yakinlik"
+    assert sonuc.stdout.strip() == "SUNUCU -m yakinlik.bekci"
     assert not (proje / ".venv" / "eski").exists()
 
 

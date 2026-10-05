@@ -54,18 +54,19 @@ def _baglan(yol: Path) -> sqlite3.Connection:
         raise ValueError(f"veri dosyası açılamadı: {yol} ({hata})") from hata
     try:
         db.execute("PRAGMA locking_mode = EXCLUSIVE")  # kilit bağlantı kapanana dek bırakılmaz
-        db.execute("PRAGMA journal_mode = WAL")
-        db.execute("PRAGMA synchronous = NORMAL")  # süreç ölse de kayıp yok; yalnız elektrik kesilirse son tikler
         db.execute("BEGIN IMMEDIATE")  # kilidi şimdi al: dosya başka sunucudaysa burada anlaşılır
         surum = db.execute("PRAGMA user_version").fetchone()[0]
         tablo_sayisi = db.execute("SELECT COUNT(*) FROM sqlite_master").fetchone()[0]
         db.execute("COMMIT")
-        if surum == 0 and tablo_sayisi == 0:
-            db.executescript(f"BEGIN IMMEDIATE;\n{_SEMA}\nPRAGMA user_version = {SURUM};\nCOMMIT;")
-        elif surum == 0:
+        # Dosyaya ancak bizim olduğu anlaşılınca yazılır (WAL kipi dosya başlığını değiştirir).
+        if surum == 0 and tablo_sayisi > 0:
             raise ValueError(f"veri dosyası bu sunucuya ait değil: {yol}")
-        elif surum > SURUM:
+        if surum > SURUM:
             raise ValueError(f"veri dosyası daha yeni bir sürümle yazılmış (sürüm {surum}): {yol}")
+        db.execute("PRAGMA journal_mode = WAL")
+        db.execute("PRAGMA synchronous = NORMAL")  # süreç ölse de kayıp yok; yalnız elektrik kesilirse son tikler
+        if surum == 0:
+            db.executescript(f"BEGIN IMMEDIATE;\n{_SEMA}\nPRAGMA user_version = {SURUM};\nCOMMIT;")
     except sqlite3.Error as hata:
         db.close()
         if hata.sqlite_errorname in ("SQLITE_BUSY", "SQLITE_LOCKED"):

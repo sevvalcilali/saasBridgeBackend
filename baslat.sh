@@ -14,7 +14,7 @@ if ! hazir; then
   rm -rf .venv
   # Python 3.11+ gerekir; sistemdeki "python3" daha eski olabilir.
   PYTHON=""
-  for aday in python3.11 python3.12 python3.13 python3; do
+  for aday in python3.11 python3.12 python3.13 python3.14 python3; do
     if command -v "$aday" >/dev/null 2>&1 && "$aday" -c 'import sys; sys.exit(sys.version_info < (3, 11))'; then
       PYTHON=$aday
       break
@@ -37,4 +37,5 @@ if ! hazir; then
   fi
 fi
 
-exec .venv/bin/python -m yakinlik "$@"
+# Bekçi: sunucu çökerse yeniden başlatır (Ctrl+C ve ayar hatasında durur).
+exec .venv/bin/python -m yakinlik.bekci "$@"

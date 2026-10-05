@@ -211,3 +211,14 @@ async def test_sunucu_kapanirken_son_hal_diske_yazilir_veri_dosyasi_birakilir(tm
         motor._alan.esik = -77  # bellekte; henüz diske yazılmadı
 
     assert json.loads(ac(tmp_path).anlik)["threshold"] == -77  # kilit bırakıldı, son hal yazıldı
+
+
+def test_kapanirken_diske_yazilamazsa_kaybolan_veri_gunlukte_acikca_yazar(tmp_path, caplog):
+    motor = ac(tmp_path)
+    motor._depo._db.execute("CREATE TEMP TRIGGER disk_dolu BEFORE INSERT ON kisi BEGIN SELECT RAISE(ABORT, 'x'); END")
+    motor.kisi_ekle({"ad": "Yazılamayan"})  # ilk hata burada günlüğe düştü
+
+    motor.kapat()
+
+    hatalar = [k for k in caplog.records if k.levelname == "ERROR" and "kapanırken" in k.getMessage()]
+    assert len(hatalar) == 1 and str(tmp_path / "yakinlik.sqlite") in hatalar[0].getMessage()

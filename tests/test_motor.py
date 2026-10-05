@@ -165,7 +165,7 @@ async def test_durum_uretilemeyen_tik_kaynagi_birakmaz_son_durum_yeniden_gider(m
         return asil(*argumanlar)
 
     monkeypatch.setattr(motor_modulu, "durum_uret", bir_kez_bozuk)
-    abone = motor.abone_ol()
+    abone = motor.abone_ol(grafik=False)  # pano gibi: grafikli hal o tikte yeniden üretilmeye çalışılmaz
 
     with pytest.raises(Dur):
         await motor.calis()
@@ -224,3 +224,48 @@ def test_benzetimde_masadaki_yedekler_kart_listesinde_bos_iade_edilen_masaya_don
 
     assert set(benzetim.masadaki) - {kadro_karti} <= bos_kartlar | {yedek}
     assert (sonra[kadro_karti], sonra[yedek]) == (None, kisi.kisi_id)
+
+
+def test_yeni_bildirimler_gunluge_yazilir(caplog):
+    caplog.set_level("INFO", logger="yakinlik.motor")
+    motor = motor_kur()
+    t = 0.0
+    for _ in range(int(62 / 0.5)):  # kart 2 duyuluyor, sonra 61 sn susuyor → "Kart sinyali kesildi"
+        t += 0.5
+        motor.isle(tik_uret(t, sessiz=("2",) if t > 1 else ()))
+
+    bildirimler = [kayit.getMessage() for kayit in caplog.records if kayit.getMessage().startswith("bildirim:")]
+    assert bildirimler == ["bildirim: Kart sinyali kesildi — Ayşe Demir (kart 2) 1 dk'dır duyulmuyor."]
+
+
+# --- grafik verisi yalnız isteyene (B7, Şevval kararı 05.10.2026): /state'in ~%60'ı, yalnız Kurulum kullanır ---
+
+def test_grafik_isteyen_izleyici_yokken_grafik_hesaplanmaz_isteyen_tam_durumu_alir(monkeypatch):
+    motor = motor_kur()
+    cagri, asil = [], motor._alan.sinyal.gecmis
+    monkeypatch.setattr(motor._alan.sinyal, "gecmis", lambda *a: cagri.append(1) or asil(*a))
+    grafiksiz = motor.abone_ol(grafik=False)
+    for t in (0.5, 1.0, 1.5):
+        motor.isle(tik_uret(t, {("2", "3"): YAKIN}))
+    hesap_yokken = len(cagri)
+    grafikli = motor.abone_ol(grafik=True)
+    motor.isle(tik_uret(2.0, {("2", "3"): YAKIN}))
+
+    assert hesap_yokken == 0
+    mesajlar = [json.loads(m) for m in grafiksiz.bekleyen()]
+    assert len(mesajlar) == 4 and all(m["history"] == {} for m in mesajlar)
+    (tam,) = [json.loads(m) for m in grafikli.bekleyen()]
+    assert tam["history"]["2-3"]
+    assert {**tam, "history": {}} == mesajlar[-1]  # başka hiçbir fark yok
+
+
+def test_tam_durum_isteyen_yokken_de_istenince_guncel_uretilir():
+    motor = motor_kur()
+    motor.abone_ol(grafik=False)
+    for t in (0.5, 1.0, 1.5):
+        motor.isle(tik_uret(t, {("2", "3"): YAKIN}))
+
+    tam = json.loads(motor.durum_baytlari(grafik=True))
+
+    assert tam["history"]["2-3"] and tam["elapsed"] == 1.5
+    assert motor.anlik == motor.durum_baytlari(grafik=True)

@@ -1,8 +1,8 @@
 @echo off
-rem Tek komutla baslatma (Windows): sanal ortam hazir degilse kurar, sunucuyu calistirir.
-rem Argumanlar sunucuya gecer:  baslat.bat --port 8010
+rem Tek komutla baslatma (Windows): sanal ortam hazir degilse kurar, sunucuyu bekciyle calistirir (cokerse yeniden
+rem baslatir). Argumanlar sunucuya gecer:  baslat.bat --port 8010
 rem (Bu dosyada Turkce harf yok: cmd kod sayfasinda bozuk gorunmesin.)
-rem NOT: Windows'ta henuz denenmedi (PLAN B7 dagitim provasi).
+rem NOT: Windows'ta henuz denenmedi (docs\DAGITIM.md).
 setlocal
 cd /d "%~dp0"
 
@@ -16,13 +16,17 @@ if exist .venv\Scripts\python.exe (
 
 if not defined HAZIR (
   if exist .venv rmdir /s /q .venv
-  py -3 -c "import sys; sys.exit(sys.version_info < (3, 11))"
+  rem Python 3.11+: once "py" baslaticisi, yoksa PATH'teki "python".
+  set PYTHON=py -3
+  py -3 -c "import sys; sys.exit(sys.version_info < (3, 11))" >nul 2>&1
+  if errorlevel 1 set PYTHON=python
+  call :surum_denetle
   if errorlevel 1 (
-    echo Python 3.11 ya da ustu bulunamadi.
-    exit /b 1
+    echo Python 3.11 ya da ustu bulunamadi. python.org'dan kurun ^(kurarken "Add to PATH" isaretli olsun^).
+    goto :hata
   )
-  py -3 -m venv .venv
-  rem Etkinlikte internet yok: wheelhouse\ varsa paketler oradan kurulur.
+  call %%PYTHON%% -m venv .venv
+  rem Etkinlikte internet yok: wheelhouse\ varsa paketler oradan kurulur (araclar\wheelhouse_hazirla.bat).
   if exist wheelhouse (
     .venv\Scripts\python.exe -m pip install --no-index --find-links wheelhouse -r requirements.txt
   ) else (
@@ -31,8 +35,20 @@ if not defined HAZIR (
   if errorlevel 1 (
     rem Yarim kurulum kalmasin.
     rmdir /s /q .venv
-    exit /b 1
+    echo Kurulum basarisiz. wheelhouse\ klasoru bu bilgisayarin Windows ve Python surumuyle mi hazirlandi?
+    goto :hata
   )
 )
 
-.venv\Scripts\python.exe -m yakinlik %*
+.venv\Scripts\python.exe -m yakinlik.bekci %*
+if errorlevel 1 goto :hata
+exit /b 0
+
+:surum_denetle
+%PYTHON% -c "import sys; sys.exit(sys.version_info < (3, 11))" >nul 2>&1
+exit /b %errorlevel%
+
+:hata
+rem Cift tiklanan pencere hemen kapanmasin: hata okunabilsin.
+pause
+exit /b 1
