@@ -21,7 +21,8 @@
   (05.10.2026; `docs/B2_NOT.md`): Pano, Kurulum ve Sunum gerçek sunucudan (benzetim) canlı veri alıyor.
   B3 (karşılama masası) bitti ve onaylandı (05.10.2026; `docs/B3_NOT.md`).
   B4 (`/api/cards`) bitti ve onaylandı (`docs/B4_NOT.md`). B5 (görüşme kayıtları, atama geçmişi, rapor) bitti ve onaylandı
-  (`docs/B5_NOT.md`). B6 (kalıcılık + sıfırlama) bitti, onay bekliyor (`docs/B6_NOT.md`). Sıradaki: B7 (sertleştirme).
+  (`docs/B5_NOT.md`). B6 (kalıcılık + sıfırlama) bitti ve onaylandı (`docs/B6_NOT.md`). B7 (sertleştirme + dağıtım) bitti,
+  onay bekliyor (`docs/B7_NOT.md`, `docs/DAGITIM.md`). Sıradaki: B8 (gerçek alıcı; Muhittin'in seri biçim belgesi gerekli).
 - **Çalıştırma:** `./baslat.sh` (ya da `.venv/bin/python -m yakinlik`) → `http://localhost:8002`; testler `.venv/bin/pytest`.
 - **Kardeş repo:** https://github.com/sevvalcilali/SaasBridge — arayüz, mock sunucu (`mock-server/mock.js`, davranışın çalışan
   şartnamesi), sözleşme belgesi (`SUNUCUDAN_ISTENENLER.md`), gereksinim belgesi (`UI_TASARIM_BRIEF.md` §2, §5, §9).
@@ -672,7 +673,11 @@ commit'lerini alır, sonunda `docs/Bn_NOT.md` yazılır. Süreler tek kişi, tam
 - **Kabul:** süreç `kill -9` ile öldürülüp açılınca `/api/people`, `/api/sessions`, `/state.edges`, `threshold` aynı; reset
   sonrası beklenen kümeler boş/dolu; `veri/yedek/` dosyası var.
 
-#### B7 ⬜ Sertleştirme + dağıtım (tahmin: 2 gün)
+#### B7 ✅ Sertleştirme + dağıtım (tahmin: 2 gün)
+- **Yapıldı** (`docs/B7_NOT.md`): yük ölçümü (`araclar/yuk_olc.py`, `docs/DAGITIM.md` §8); grafik verisi yalnız isteyene
+  (`?grafik=0`, Şevval kararı 05.10.2026, Bölüm 10 seçenek b; SaasBridge PR #2); bekçi (`yakinlik/bekci.py`, R5); 413 ve
+  200 karakter; `yakinlik.log`; `/api/health` alanları; `wheelhouse/` betikleri ve macOS provası; `baslat.bat` düzeltmeleri
+  (Windows'ta denenmedi). `pytest` 435/435.
 - Yük: `--kisi 97` 30 dk — tik < 50 ms, JSON boyutu, bellek sabit, 5 SSE istemcisi. Yavaş istemci kesme, gövde sınırı 1 MB /
   413, metin kırpma, günlük (`yakinlik.log`, döner), `wheelhouse/` ile çevrimdışı kurulum provası, Windows MIME/COM notları,
   `docs/DAGITIM.md` (etkinlik sabahı kontrol listesi).
@@ -702,7 +707,7 @@ commit'lerini alır, sonunda `docs/Bn_NOT.md` yazılır. Süreler tek kişi, tam
 | R2 | `server.py` yumuşatması ile ortanca farklı karar veriyor | Kalibrasyon ekranı yanıltır | B8'de iz karşılaştırması; sözleşme (ortanca) esas, fark Muhittin'le konuşulur |
 | R3 | Alıcı USB'de uyuyor / çekiliyor | Veri kesilir | Yeniden açma döngüsü, `receiverAge`, güç ayarı notu; arayüz "ALICI BAĞLI DEĞİL" bandı zaten var |
 | R4 | 97 kişi / 500 çiftte JSON 200 KB × 2 Hz × 5 istemci | CPU/ağ | Tek serileştirme, yavaş istemci kesme, `history` yalnız teknik istemciye (ayrı karar) |
-| R5 | Süreç çökmesi → gün kaybı | Kritik | B6 kalıcılık; tik sonu yazım; yedek; `baslat.sh` otomatik yeniden başlatma döngüsü (`until python …; do sleep 1; done`) |
+| R5 | Süreç çökmesi → gün kaybı | Kritik | B6 kalıcılık; tik sonu yazım; yedek; B7 bekçi (`python -m yakinlik.bekci`: çökerse 2 sn'de yeniden açar, `--yeni-etkinlik`i tekrarlamaz, ayar hatasında ve üst üste hızlı çöküşte durur) |
 | R6 | Windows'ta MIME `text/plain` | Sayfa açılmaz | Açık MIME tablosu (B0 kabulü) |
 | R7 | Soru 1 (yedek kartlar panoda hayalet) kararsız kalır | Pano kirlenir | Varsayılan: yedek kart `people`'a **görüşmeye girince** eklenir; karar değişirse `atanmamis` bayrağı (bkz. Bölüm 16.3 madde 8) |
 | R8 | "100+ kişi" ile 1–99 kart aralığı (Soru 6) | Kapasite | Sunucu kart aralığını ayardan okur (`KART_EN_BUYUK`); arayüz iki durumda da çalışıyor |
@@ -742,10 +747,11 @@ Hiçbiri B0–B2'yi engellemez; varsayılanlar bu belgededir. Soru 1–6'nın ta
       sürmesi B6; `--tohum` B2.6 ile; benzetim tik kadansı (bekle-sonra-çalış kayması) açık. Ayrıntı: `docs/B1_NOT.md`.
 - [ ] Arayüz reposu (SaasBridge), ayrı onay: "5 sn" yazan iki metin → 1 dakika (Rapor dipnotu, Kurulum çift tablosu), mock'un
       `GIRIS_SN` → 60, B2.6 (mock testlerini gerçek sunucuya koşturma). `docs/B2_NOT.md` → "Arayüz reposunda yapılması gerekenler".
-- [ ] B7: R5'teki otomatik yeniden başlatma döngüsü `--yeni-etkinlik`i **tekrarlamamalı** (her çöküşte veri yedeğe
-      taşınırdı); diske yazım bozulursa yalnız günlüğe yazılıyor, arayüzde işaret yok (sözleşme değişikliği gerekir).
-- [ ] Grafik verisi (`history`) yükü: 3 saatte ~850 çift → tik ~50 ms, `/state` ~528 KB. Öneri: yalnız Kurulum açıkken
-      göndermek (Bölüm 10 b; arayüz değişikliği) — karar bekliyor.
+- [x] B7: bekçi `--yeni-etkinlik`i tekrarlamıyor. Diske yazım bozulursa arayüzde işaret yok (sözleşme değişikliği
+      gerekir); operatör `/api/health` → `veri.yaziliyor` ile görür (`docs/DAGITIM.md`).
+- [ ] `baslat.bat` ve `wheelhouse_hazirla.bat` Windows'ta denenmedi; etkinlik bilgisayarı Windows ise B8 provasında.
+- [x] Grafik verisi (`history`) yükü: karar verildi (05.10.2026, Şevval): yalnız isteyen ekrana (`?grafik=0`). Arayüz
+      tarafı SaasBridge PR #2 (onay bekliyor).
 
 ### 16.3 Plan ↔ kod çelişkileri (analiz 03.10.2026; karar bekliyor)
 Bu plan ile `SaasBridge` kodu (mock ve testleri) karşılaştırılınca çıkanlar. Hiçbiri henüz karara bağlanmadı; planın ilgili

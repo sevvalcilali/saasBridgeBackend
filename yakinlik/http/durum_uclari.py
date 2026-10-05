@@ -17,20 +17,26 @@ def _gecerli_esik(deger: object) -> bool:
     )
 
 
+def _grafik(istek: Request) -> bool:
+    """`?grafik=0`: Kurulum grafiğinin verisi (history) gönderilmez. Parametre yoksa tam durum (eski arayüz uyumu)."""
+    return istek.query_params.get("grafik") != "0"
+
+
 def durum_uclari(motor: Motor) -> APIRouter:
     yonlendirici = APIRouter()
 
     @yonlendirici.get("/state")
-    async def state() -> Response:
-        return Response(motor.anlik, media_type="application/json; charset=utf-8", headers={"Cache-Control": "no-store"})
+    async def state(istek: Request) -> Response:
+        govde = motor.durum_baytlari(_grafik(istek))
+        return Response(govde, media_type="application/json; charset=utf-8", headers={"Cache-Control": "no-store"})
 
     @yonlendirici.get("/events")
-    async def events() -> StreamingResponse:
-        abone = motor.abone_ol()  # akış açılmadan abone ol: ilk mesajla ilk tik arasında boşluk kalmasın
+    async def events(istek: Request) -> StreamingResponse:
+        abone = motor.abone_ol(_grafik(istek))  # akış açılmadan abone ol: ilk mesajla ilk tik arasında boşluk kalmasın
 
         async def akis() -> AsyncIterator[bytes]:
             try:
-                yield b"data: " + motor.anlik + b"\n\n"  # bağlanır bağlanmaz son durum
+                yield b"data: " + motor.durum_baytlari(abone.grafik) + b"\n\n"  # bağlanır bağlanmaz son durum
                 while (veri := await abone.al()) is not None:
                     yield b"data: " + veri + b"\n\n"
             finally:

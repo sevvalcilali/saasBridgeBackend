@@ -1,4 +1,5 @@
 """HTTP iskeleti (PLAN B0.4): statik arayüz, /api/health, bilinmeyen uç ve hata yanıtları."""
+import asyncio
 import mimetypes
 
 import pytest
@@ -6,6 +7,8 @@ import pytest
 import yakinlik
 from yakinlik.ayar import Ayar
 from yakinlik.http.uygulama import uygulama_olustur
+from yakinlik.motor import Motor
+from yakinlik.saat import SahteSaat
 
 
 def tur(yanit):
@@ -19,7 +22,74 @@ async def test_saglik_ucu_surumu_ve_kaynagi_bildirir(istemci_ac, dist, tmp_path)
         yanit = await istemci.get("/api/health")
 
     assert yanit.status_code == 200
-    assert yanit.json() == {"ok": True, "surum": yakinlik.__surum__, "kaynak": "kayit"}
+    assert yanit.json() == {
+        "ok": True, "surum": yakinlik.__surum__, "kaynak": "kayit", "receiverAge": None, "istemci": 0, "veri": None,
+    }
+
+
+async def test_saglik_ucu_kalici_veriyi_ve_yazimin_durdugunu_bildirir(istemci_ac, dist, tmp_path):
+    # Operatör için: arayüz diske yazılamadığını göstermez (sözleşmede alan yok), /api/health gösterir.
+    motor = Motor.ayardan(Ayar(kisi=4, veri=tmp_path), saat=SahteSaat(1e9))
+    async with istemci_ac(uygulama_olustur(Ayar(dist=dist), motor=motor)) as istemci:
+        once = (await istemci.get("/api/health")).json()["veri"]
+        motor._depo._db.execute("CREATE TEMP TRIGGER bozuk BEFORE INSERT ON ayar BEGIN SELECT RAISE(ABORT, 'x'); END")
+        motor.esik_ayarla(-80)
+        sonra = (await istemci.get("/api/health")).json()["veri"]
+
+    assert once == {"dosya": str(tmp_path / "yakinlik.sqlite"), "yaziliyor": True}
+    assert sonra["yaziliyor"] is False
+
+
+@pytest.mark.parametrize("parcali", [False, True], ids=["content-length", "parca-parca"])
+async def test_1_mb_ustu_govde_413_ve_sozlesme_govdesi(istemci, parcali):
+    govde = b"a;b;Misafir;;\n" * (1024 * 1024 // 14 + 1)  # 1 MB'ı biraz aşar
+
+    async def parcalar():
+        for i in range(0, len(govde), 65536):
+            yield govde[i:i + 65536]
+
+    once = len((await istemci.get("/api/people")).json())
+    yanit = await istemci.post("/api/people/import", content=parcalar() if parcali else govde)
+    sonra = len((await istemci.get("/api/people")).json())
+
+    assert yanit.status_code == 413
+    assert yanit.json() == {"ok": False, "hata": "istek gövdesi çok büyük (en çok 1 MB)"}
+    assert sonra == once  # hiçbiri işlenmedi
+
+
+async def test_1_mb_icindeki_govde_islenir(istemci):
+    govde = "Ad;Soyad;Rol;Kurum\n" + "Ali;Kaya;Misafir;" + "x" * (1024 * 1024 - 40) + "\n"
+
+    yanit = await istemci.post("/api/people/import", content=govde.encode())
+
+    assert len(govde.encode()) <= 1024 * 1024
+    assert yanit.status_code == 200 and yanit.json()["eklenen"] == 1
+
+
+async def test_yazma_istekleri_gunluge_yazilir_okumalar_yazilmaz(istemci, caplog):
+    caplog.set_level("INFO", logger="yakinlik.http")
+    await istemci.post("/api/people", json={"ad": "Deniz"})
+    await istemci.get("/api/people")
+    await istemci.post("/control", content=b'{"cmd":"threshold","value":-70}')
+
+    satirlar = [kayit.getMessage() for kayit in caplog.records if kayit.name.startswith("yakinlik.http")]
+    assert [satir.split(" (")[0] for satir in satirlar] == ["POST /api/people → 200", "POST /control → 200"]
+
+
+async def test_motor_durdurulurken_hata_olsa_da_veri_dosyasi_kapatilir(dist, tmp_path):
+    motor = Motor.ayardan(Ayar(kisi=4, veri=tmp_path), saat=SahteSaat(1e9))
+
+    async def patlayan_calis():
+        raise RuntimeError("beklenmeyen")
+
+    motor.calis = patlayan_calis
+    uygulama = uygulama_olustur(Ayar(dist=dist), motor=motor)
+    with pytest.raises(RuntimeError):
+        async with uygulama.router.lifespan_context(uygulama):
+            await asyncio.sleep(0)  # motor görevi çalışıp düşsün
+
+    assert motor._depo is None  # kapatıldı: ikinci sunucu dosyayı açabilir
+    Motor.ayardan(Ayar(kisi=4, veri=tmp_path), saat=SahteSaat(1e9)).kapat()
 
 
 @pytest.mark.parametrize("adres", ["/", "/?clean=1"])

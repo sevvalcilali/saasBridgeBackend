@@ -56,6 +56,9 @@ def test_sunucu_acilir_ve_ctrl_c_ile_temiz_kapanir(tmp_path):
     assert yanit.json()["kaynak"] == "kayit"
     assert surec.returncode == 0, cikti
     assert "Traceback" not in cikti
+    gunluk = (tmp_path / "yakinlik.log").read_text(encoding="utf-8")
+    assert f"config {tmp_path.resolve() / 'config.toml'} (var)" in gunluk and "veri kalıcı değil" in gunluk
+    assert gunluk.rstrip().endswith("kapandı")
 
 
 def test_bozuk_config_toml_anlasilir_hatayla_kapanir(tmp_path):
@@ -196,3 +199,39 @@ def test_kill_9_ile_olen_sunucu_acilinca_kisiler_kayitlar_kenarlar_ve_esik_korun
         assert kenarlar[(k["a"], k["b"])] >= k["min"]
     assert sonra["/state"]["elapsed"] >= once["/state"]["elapsed"]
     assert list((tmp_path / "veri" / "yedek").glob("yakinlik-acilis-*.sqlite"))  # açılışta yedek alındı
+
+
+def test_bes_canli_akis_istemcisi_ayni_anda_saniyede_iki_durum_alir(tmp_path):
+    # PLAN B7 yük kabulü: pano, sunum, kurulum, masa ve yedek bir ekran aynı anda bağlı.
+    from concurrent.futures import ThreadPoolExecutor
+
+    with sunucu(tmp_path) as (port, _):
+        with ThreadPoolExecutor(5) as havuz:
+            sonuclar = list(havuz.map(lambda _: sse_oku(port, en_cok_mesaj=1000, en_cok_sn=3)[1], range(5)))
+        saglik = httpx.get(f"http://127.0.0.1:{port}/api/health", trust_env=False).json()
+
+    for mesajlar in sonuclar:
+        assert len(mesajlar) >= 6  # 3 sn × 2 Hz (ilk anlık durum dahil)
+    assert saglik["istemci"] == 0  # bağlantılar kapanınca izleyiciler düştü
+
+
+def test_grafik_0_ile_baglanan_canli_akis_grafik_verisi_almaz(tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+
+    def oku(port, yol):
+        with httpx.Client(timeout=5, trust_env=False) as istemci:
+            with istemci.stream("GET", f"http://127.0.0.1:{port}{yol}") as yanit:
+                gecmisler, tampon, bas = [], "", time.monotonic()
+                for parca in yanit.iter_text():
+                    tampon += parca
+                    while "\n\n" in tampon:
+                        blok, tampon = tampon.split("\n\n", 1)
+                        gecmisler.append(json.loads(blok.removeprefix("data: "))["history"])
+                    if time.monotonic() - bas > 4:
+                        return gecmisler
+
+    with sunucu(tmp_path, "--hizlandir", "60") as (port, _):
+        with ThreadPoolExecutor(2) as havuz:
+            tam, grafiksiz = havuz.map(lambda yol: oku(port, yol), ["/events", "/events?grafik=0"])
+
+    assert any(tam) and all(gecmis == {} for gecmis in grafiksiz) and len(grafiksiz) >= 6

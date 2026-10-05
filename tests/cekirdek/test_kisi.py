@@ -86,3 +86,11 @@ def test_silinen_kisi_listede_ve_kartta_yok(defter):
 
 def test_asiri_buyuk_yildiz_hata_vermez(defter):
     assert defter.ekle(ad="Büyük", rol="investor", yildiz=10**400).yildiz == 0  # JS "| 0" gibi
+
+
+def test_uzun_metinler_200_karakterde_kirpilir(defter):
+    # PLAN Bölüm 11: ad, kurum ve not 200 karakter (pano ve rapor taşmasın, bellek şişmesin).
+    kisi = defter.ekle(ad="A" * 500, kurum="K" * 300, notu="N" * 201)
+    defter.guncelle(kisi.kisi_id, {"not": "M" * 1000})
+
+    assert (len(kisi.ad), len(kisi.kurum), kisi.notu) == (200, 200, "M" * 200)

@@ -16,6 +16,8 @@ Arayüzün (https://github.com/sevvalcilali/SaasBridge) gerçek sunucusu: alıc�
 - B3 (karşılama masası: kişiler, CSV, kart verme / iade / değişim) bitti ve onaylandı (`docs/B3_NOT.md`). Kart listesi
   (`/api/cards`) B4'te geldi (`docs/B4_NOT.md`); görüşme kayıtları, atama geçmişi ve rapor B5'te (`docs/B5_NOT.md`).
 - B6 (kalıcılık + sıfırlama): veri SQLite'ta, sunucu yeniden açılınca kaldığı yerden sürer (`docs/B6_NOT.md`).
+- B7 (sertleştirme + dağıtım): bekçi, girdi sınırları, günlük, çevrimdışı kurulum, yük ölçümü (`docs/B7_NOT.md`).
+  Etkinlik bilgisayarına kurulum ve etkinlik günü kontrol listesi: **`docs/DAGITIM.md`**.
 - Donanım (kartlar + alıcı) var ve test edildi; gerçek alıcıya bağlama B8'de.
 
 Teknoloji: Python 3.11+, FastAPI + uvicorn, pyserial, SQLite (stdlib).
@@ -38,6 +40,9 @@ görüşmeler, bildirimler, eşik. Sunucu kapanıp açılınca kaldığı yerden
 ```bash
 ./baslat.sh --yeni-etkinlik  # yeni etkinlik: eski veri veri/yedek/ altına taşınır, sunucu boş başlar
 ```
+
+`baslat.sh` sunucuyu **bekçiyle** çalıştırır: sunucu çökerse 2 sn içinde yeniden açılır (Ctrl+C ile kapanır). Günlük:
+`yakinlik.log`. Etkinlikte internet yoksa paketler önceden `./araclar/wheelhouse_hazirla.sh` ile indirilir (`docs/DAGITIM.md`).
 
 Elle kurulum ve testler:
 

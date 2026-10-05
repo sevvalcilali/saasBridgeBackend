@@ -4,6 +4,7 @@ import json
 
 import pytest
 from destek.salon import KADRO, YAKIN, tik_uret
+from starlette.requests import Request
 
 from yakinlik.ayar import Ayar
 from yakinlik.cekirdek.alan import Alan
@@ -118,7 +119,7 @@ async def test_canli_akis_ilk_durumu_tik_beklemeden_verir_sonra_her_tiki(motor):
     from yakinlik.http.durum_uclari import durum_uclari
 
     (events,) = [rota for rota in durum_uclari(motor).routes if rota.path == "/events"]
-    yanit = await events.endpoint()
+    yanit = await events.endpoint(Request({"type": "http", "query_string": b"", "headers": []}))
     akis = yanit.body_iterator
     try:
         ilk = await asyncio.wait_for(anext(akis), timeout=0.2)  # motor hiç tiklemedi
@@ -129,3 +130,14 @@ async def test_canli_akis_ilk_durumu_tik_beklemeden_verir_sonra_her_tiki(motor):
         assert json.loads(ikinci[6:])["elapsed"] == 0.5
     finally:
         await akis.aclose()
+
+
+async def test_grafik_0_ile_istenen_durumda_history_bos_digerleri_ayni(istemci, motor):
+    for t in (0.5, 1.0, 1.5):
+        motor.isle(tik_uret(t, {("2", "3"): YAKIN}))
+
+    tam = (await istemci.get("/state")).json()
+    grafiksiz = (await istemci.get("/state?grafik=0")).json()
+
+    assert tam["history"]["2-3"]
+    assert grafiksiz == {**tam, "history": {}}

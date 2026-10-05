@@ -14,6 +14,7 @@ from .. import __surum__
 from ..ayar import Ayar
 from ..motor import Motor
 from .api_uclari import api_uclari
+from .ara_katman import GovdeSiniri, IstekGunlugu
 from .durum_uclari import durum_uclari
 
 # Tür tablosu elle: Windows'ta Python `mimetypes` kayıt defterinden .js için text/plain
@@ -41,16 +42,20 @@ def uygulama_olustur(ayar: Ayar, motor: Motor | None = None) -> FastAPI:
         try:
             yield
         finally:
-            gorev.cancel()
-            with suppress(asyncio.CancelledError):
-                await gorev
-            motor.kapat()  # son hal diske; veri dosyası bırakılır
+            try:
+                gorev.cancel()
+                with suppress(asyncio.CancelledError):
+                    await gorev
+            finally:
+                motor.kapat()  # son hal diske; veri dosyası bırakılır (motor hatayla dursa da)
 
     # /docs ve /openapi.json kapalı: sayfaları CDN ister, etkinlikte internet yok.
     uygulama = FastAPI(
         title="Yakınlık", version=__surum__, docs_url=None, redoc_url=None, openapi_url=None, lifespan=omur
     )
     uygulama.state.motor = motor
+    uygulama.add_middleware(GovdeSiniri)
+    uygulama.add_middleware(IstekGunlugu)  # en dışta: 413 de günlüğe düşer
 
     @uygulama.exception_handler(Exception)
     async def beklenmeyen_hata(istek, hata) -> JSONResponse:
@@ -59,7 +64,7 @@ def uygulama_olustur(ayar: Ayar, motor: Motor | None = None) -> FastAPI:
 
     @uygulama.get("/api/health")
     async def saglik() -> dict:
-        return {"ok": True, "surum": __surum__, "kaynak": ayar.kaynak}
+        return {"ok": True, "surum": __surum__, "kaynak": ayar.kaynak, **motor.saglik()}
 
     uygulama.include_router(durum_uclari(motor))
     uygulama.include_router(api_uclari(motor))
