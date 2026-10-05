@@ -206,3 +206,21 @@ def test_masadan_kart_verilince_ve_iade_edilince_benzetim_haberdar_olur():
 
     assert salonda
     assert kart in benzetim.masadaki
+
+
+def test_benzetimde_masadaki_yedekler_kart_listesinde_bos_iade_edilen_masaya_doner():
+    # Mock'un stok.test.js senaryosu: yedekler duyulur ve atanmamış; iade edilen kart boştakilere döner; verilen kart çıkar.
+    motor = Motor.ayardan(Ayar(kisi=5))
+    benzetim = motor._kaynak.benzetim
+    motor.isle(benzetim.tik(0.5))
+    yedek, kadro_karti = benzetim.masadaki[0], benzetim.kadro[0].kart
+
+    bos_kartlar = {k["kart"] for k in motor.kartlar() if k["atanan"] is None}
+    motor.iade(kadro_karti, ayrildi=True)
+    kisi = motor.kisi_ekle({"ad": "Masadan", "rol": "guest"})
+    motor.ata(kisi.kisi_id, yedek)
+    motor.isle(benzetim.tik(0.5))
+    sonra = {k["kart"]: k["atanan"] for k in motor.kartlar()}
+
+    assert set(benzetim.masadaki) - {kadro_karti} <= bos_kartlar | {yedek}
+    assert (sonra[kadro_karti], sonra[yedek]) == (None, kisi.kisi_id)

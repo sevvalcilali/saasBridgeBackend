@@ -57,8 +57,11 @@ def _tam_sayi(deger: object) -> int:
             deger = float(deger.strip() or 0)
         except ValueError:
             return 0
-    if isinstance(deger, (int, float)) and math.isfinite(deger):
-        return int(deger)
+    try:
+        if isinstance(deger, (int, float)) and math.isfinite(deger):
+            return int(deger)
+    except OverflowError:  # çok büyük tam sayı (float'a sığmaz)
+        pass
     return 0
 
 

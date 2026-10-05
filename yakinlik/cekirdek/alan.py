@@ -42,6 +42,7 @@ class Alan:
         self._kayip_bildirildi: set[str] = set()  # kart
         self._sessiz: dict[str, float] = {}  # kart → alıcı canlıyken kesintisiz duyulmadığı saniye
         self.atama_gecmisi: list = []  # AtamaKaydi (cekirdek/atama.py); sıfırlamada silinir
+        self._emekli_sayac = 0  # iade edilen kişisiz kartların eski kimlikleri için sıra no
 
     @property
     def gecen_sn(self) -> float:
@@ -86,12 +87,24 @@ class Alan:
     def kimligi_tasi(self, eski: str, yeni: str) -> None:
         """`eski` kimliğe yazılmış süreler, anlaşmalar ve sayaçlar `yeni` kimliğe geçer ("kart:N" → kisiId)."""
         self.kenarlar.tasi(eski, yeni)
-        self.anlasmalar = {kimlik_cifti(*(yeni if kimlik == eski else kimlik for kimlik in cift)) for cift in self.anlasmalar}
+        tasinan = {kimlik_cifti(*(yeni if kimlik == eski else kimlik for kimlik in cift)) for cift in self.anlasmalar}
+        self.anlasmalar = {(x, y) for x, y in tasinan if x != y}  # kişinin kendisiyle anlaşması olmaz
         if eski in self._bosta:
             self._bosta[yeni] = self._bosta.pop(eski)
         if eski in self._yalniz_bildirildi:
             self._yalniz_bildirildi.discard(eski)
             self._yalniz_bildirildi.add(yeni)
+
+    def kimligi_emekli_et(self, kimlik: str) -> None:
+        """Kişisiz kart masaya döndü: o kartı taşıyan bilinmeyen kişinin süreleri eşlerinde kalır ama kart panodan düşer ve
+        kartın sonraki sahibine geçmez (PLAN 5.2 madde 5). Kimlik, panoda görünmeyen bir arşiv kimliğine taşınır."""
+        self._emekli_sayac += 1
+        self.kimligi_tasi(kimlik, f"arsiv:{kimlik}:{self._emekli_sayac}")
+
+    def sayaclari_sifirla(self, kisi_id: str) -> None:
+        """Kartını kaybeden kişinin boşta sayacı sıfırlanır: yeniden kart alınca eski yalnızlık sayılmaz."""
+        self._bosta.pop(kisi_id, None)
+        self._yalniz_bildirildi.discard(kisi_id)
 
     def kisi(self, kart: str) -> Kisi:
         return self.defter.kart_sahibi(kart) or kisisiz_kart(kart)

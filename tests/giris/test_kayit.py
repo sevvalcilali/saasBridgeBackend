@@ -37,11 +37,11 @@ async def test_kaydeden_kaynak_tikleri_aynen_iletir_ve_satir_satir_yazar(tmp_pat
     assert iletilen == ORNEK_TIKLER
     assert [json.loads(satir) for satir in dosya.read_text(encoding="utf-8").splitlines()] == [
         {"t": 0.5, "paketler": [
-            {"kart": "7", "duyulanlar": [["12", -53.25]], "pil": 88, "t": 0.5},
-            {"kart": "12", "duyulanlar": [], "pil": None, "t": 0.5},
+            {"kart": "7", "duyulanlar": [["12", -53.25]], "pil": 88, "t": 0.5, "alici_rssi": None},
+            {"kart": "12", "duyulanlar": [], "pil": None, "t": 0.5, "alici_rssi": None},
         ]},
         {"t": 1.0, "paketler": []},
-        {"t": 2.5, "paketler": [{"kart": "7", "duyulanlar": [], "pil": 88, "t": 2.5}]},
+        {"t": 2.5, "paketler": [{"kart": "7", "duyulanlar": [], "pil": 88, "t": 2.5, "alici_rssi": None}]},
     ]
 
 
@@ -253,3 +253,14 @@ def test_seri_kaynak_henuz_yok():
     # Seri paket biçimi bilinmiyor; SeriKaynak B8'de yazılacak.
     with pytest.raises(ValueError, match="B8"):
         kaynak_olustur(Ayar(kaynak="seri"))
+
+
+async def test_alicinin_duydugu_guc_kayda_yazilir_eski_izde_yoksa_bos(tmp_path, bekleme_yok, ilk_tikler):
+    dosya = tmp_path / "iz.jsonl"
+    tik = Tik(0.5, (Paket("7", (), 88, 0.5, alici_rssi=-71.5),))
+    await ilk_tikler(KaydedenKaynak(SabitKaynak([tik]), dosya))
+    eski = tmp_path / "eski.jsonl"
+    eski.write_text('{"t": 0.5, "paketler": [{"kart": "7", "duyulanlar": [], "pil": 88, "t": 0.5}]}\n', encoding="utf-8")
+
+    assert await ilk_tikler(KayitKaynak(dosya, bekle=bekleme_yok)) == [tik]
+    assert (await ilk_tikler(KayitKaynak(eski, bekle=bekleme_yok)))[0].paketler[0].alici_rssi is None

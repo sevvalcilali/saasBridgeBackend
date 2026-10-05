@@ -14,7 +14,7 @@ from .ayar import Ayar
 from .cekirdek import atama
 from .cekirdek.alan import Alan
 from .cekirdek.csv_ice import AktarmaSonucu, iceri_aktar
-from .cekirdek.durum import Etkinlik, durum_uret
+from .cekirdek.durum import Etkinlik, durum_uret, kartlar_uret
 from .cekirdek.kisi import Kisi, KisiDefteri
 from .giris.kaynak import TIK_SN, PaketKaynagi, Tik
 from .giris.olustur import kaynak_olustur
@@ -150,6 +150,10 @@ class Motor:
     def iade(self, kart: str, ayrildi: bool) -> None:
         self._benzetime_bildir(atama.iade(self._alan, kart, ayrildi, self._saat.simdi()))
         self._guncelle()
+
+    def kartlar(self) -> list[dict]:
+        """Alıcının duyduğu kartlar (GET /api/cards)."""
+        return kartlar_uret(self._alan)
 
     def kart_biliniyor(self, kart: str) -> bool:
         """Kart bir kişide mi ya da alıcı onu hiç duydu mu? Hiç bilinmeyen kart masaya hayalet olarak eklenmesin."""

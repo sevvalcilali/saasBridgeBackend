@@ -209,3 +209,36 @@ async def test_gorusmedeki_kart_iade_edilince_gorusme_kapanir(istemci, motor):
 
 async def test_bilinmeyen_api_ucu_hala_404(istemci):
     assert (await istemci.post("/api/people/k1", content=b"{}")).status_code == 404
+
+
+# --- kartlar (B4) ---
+
+async def test_kart_listesi_alicinin_duydugu_butun_kartlar(istemci, motor):
+    motor.isle(tik_uret(1.0))
+    yanit = await istemci.get("/api/cards")
+
+    kartlar = {k["kart"]: k for k in yanit.json()}
+    assert yanit.status_code == 200
+    assert [sorted(k) for k in kartlar.values()] == [["atanan", "kart", "pil", "rssiAlici", "seenAgo"]] * 6
+    assert list(kartlar) == ["2", "3", "4", "5", "14", "101"]  # numara sırasıyla; dinleyici de (arayüz eler)
+    assert (kartlar["2"]["atanan"], kartlar["14"]["atanan"], kartlar["101"]["atanan"]) == ("k1", None, None)
+    assert (kartlar["2"]["seenAgo"], kartlar["2"]["pil"]) == (0.0, 80)
+
+
+async def test_kart_listesi_atamayi_hemen_gosterir(istemci):
+    kisi = (await gonder(istemci, "POST", "/api/people", {"ad": "Yeni", "rol": "guest"})).json()
+    await gonder(istemci, "POST", "/api/assign", {"kisiId": kisi["kisiId"], "kart": "14"})
+    await gonder(istemci, "POST", "/api/unassign", {"kart": "2"})
+
+    kartlar = {k["kart"]: k for k in (await istemci.get("/api/cards")).json()}
+
+    assert (kartlar["14"]["atanan"], kartlar["2"]["atanan"]) == (kisi["kisiId"], None)  # iade edilen kart boşta
+
+
+async def test_bes_dakikadir_duyulmayan_bos_kart_listeden_duser_atanmis_kart_kalir(istemci, motor):
+    motor.isle(tik_uret(301.0, sessiz={"3", "14"}))  # kart 3 (atanmış) ve 14 (boş) 5 dk'dır duyulmuyor
+
+    kartlar = {k["kart"]: k for k in (await istemci.get("/api/cards")).json()}
+
+    assert "14" not in kartlar  # kapanmış / kaybolmuş boş kart kart sağlığını kirletmesin
+    assert kartlar["3"]["seenAgo"] == 300.5  # atanmış kart kalır: kayıp kart uyarısı bunu kullanır
