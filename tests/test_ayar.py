@@ -52,6 +52,18 @@ def test_configteki_yanlis_turde_deger_reddedilir(tmp_path, config, anahtar):
         yukle(tmp_path, config)
 
 
+@pytest.mark.parametrize("esik", ["-150", "72", "-19.5"])
+def test_configteki_esik_kurulum_araligi_disindaysa_reddedilir(tmp_path, esik):
+    # Kurulum ekranı −100…−20 kabul eder; "esik = 72" gibi bir yazım hatası bütün gün kimseyi "birlikte" saydırmaz.
+    with pytest.raises(ValueError, match="esik"):
+        yukle(tmp_path, f"esik = {esik}\n")
+
+
+def test_configteki_esik_aralik_sinirlari_kabul_edilir(tmp_path):
+    assert yukle(tmp_path, "esik = -100\n").esik == -100
+    assert yukle(tmp_path, "esik = -20\n").esik == -20
+
+
 def test_bozuk_toml_hatasi_dosyayi_soyler(tmp_path):
     with pytest.raises(ValueError, match="config.toml"):
         yukle(tmp_path, "port = \n")

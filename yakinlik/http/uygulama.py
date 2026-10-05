@@ -1,7 +1,10 @@
-"""FastAPI uygulaması: derlenmiş arayüzü (dist/) ve /api uçlarını aynı adresten sunar.
+"""FastAPI uygulaması: derlenmiş arayüzü (dist/), canlı durumu ve /api uçlarını aynı adresten sunar.
 
 İnce katman: iş kuralı burada yazılmaz (PLAN Bölüm 0.3).
 """
+import asyncio
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -9,6 +12,8 @@ from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Res
 
 from .. import __surum__
 from ..ayar import Ayar
+from ..motor import Motor
+from .durum_uclari import durum_uclari
 
 # Tür tablosu elle: Windows'ta Python `mimetypes` kayıt defterinden .js için text/plain
 # okuyabilir ve sayfa açılmaz (PLAN Bölüm 8.1, R6).
@@ -24,9 +29,26 @@ _BILINMEYEN_TUR = "application/octet-stream"
 _HER_YONTEM = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
 
 
-def uygulama_olustur(ayar: Ayar) -> FastAPI:
+def uygulama_olustur(ayar: Ayar, motor: Motor | None = None) -> FastAPI:
+    """Uygulamayı kurar. `motor` verilmezse ayarlardan kurulur (kaynak kurulamıyorsa ValueError, sunucu açılmadan);
+    motor sunucu açılınca çalışmaya başlar, kapanınca durur."""
+    motor = motor or Motor.ayardan(ayar)
+
+    @asynccontextmanager
+    async def omur(_: FastAPI) -> AsyncIterator[None]:
+        gorev = asyncio.create_task(motor.calis())
+        try:
+            yield
+        finally:
+            gorev.cancel()
+            with suppress(asyncio.CancelledError):
+                await gorev
+
     # /docs ve /openapi.json kapalı: sayfaları CDN ister, etkinlikte internet yok.
-    uygulama = FastAPI(title="Yakınlık", version=__surum__, docs_url=None, redoc_url=None, openapi_url=None)
+    uygulama = FastAPI(
+        title="Yakınlık", version=__surum__, docs_url=None, redoc_url=None, openapi_url=None, lifespan=omur
+    )
+    uygulama.state.motor = motor
 
     @uygulama.exception_handler(Exception)
     async def beklenmeyen_hata(istek, hata) -> JSONResponse:
@@ -37,6 +59,9 @@ def uygulama_olustur(ayar: Ayar) -> FastAPI:
     async def saglik() -> dict:
         return {"ok": True, "surum": __surum__, "kaynak": ayar.kaynak}
 
+    uygulama.include_router(durum_uclari(motor))
+
+    # İki yakalayıcı uç en sonda kalmalı: sonra eklenen uçları gölgede bırakırlar.
     # Tanımlı olmayan her /api ucu (mock'a özgü /api/demo, /api/yaklastir, /api/demo/tut dahil).
     @uygulama.api_route("/api/{yol:path}", methods=_HER_YONTEM)
     async def bilinmeyen_uc(yol: str) -> JSONResponse:

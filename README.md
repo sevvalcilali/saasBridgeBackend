@@ -8,9 +8,12 @@ Arayüzün (https://github.com/sevvalcilali/SaasBridge) gerçek sunucusu: alıc�
   fazlar, riskler
 - Sözleşme belgesi ve davranış referansı (mock): kardeş repo `SaasBridge` → `SUNUCUDAN_ISTENENLER.md`, `mock-server/mock.js`
 
-**Durum (04.10.2026):** B0 (iskelet) bitti ve onaylandı: sunucu derlenmiş arayüzü ve `GET /api/health` ucunu sunuyor. `/state`, `/events`,
-`/control` B2'de gelecek; o zamana kadar arayüz "Sunucuya bağlanılamıyor" gösterir. Teslim notu: `docs/B0_NOT.md`.
-B1 (benzetim, kayıt / oynatma, sinyal hesapları) bitti ve onaylandı: `docs/B1_NOT.md`.
+**Durum (05.10.2026):**
+
+- B0 (iskelet) ve B1 (benzetim, kayıt / oynatma, sinyal hesapları) bitti ve onaylandı: `docs/B0_NOT.md`, `docs/B1_NOT.md`.
+- B2 (canlı durum: `/state`, `/events`, `/control`) bitti ve onaylandı: Pano, Kurulum ve Sunum benzetimle canlı veri
+  alıyor (`docs/B2_NOT.md`). Masa, kart sağlığı ve rapor için gereken `/api/*` uçları B3–B5'te.
+- Donanım (kartlar + alıcı) var ve test edildi; gerçek alıcıya bağlama B8'de.
 
 Teknoloji: Python 3.11+, FastAPI + uvicorn, pyserial, SQLite (stdlib).
 
@@ -22,6 +25,7 @@ Gereken: Python 3.11+. Arayüz reposu yan klasörde (`../SaasBridge`) ve derlenm
 ./baslat.sh                  # sanal ortam hazır değilse kurar, sunucuyu başlatır → http://localhost:8002
                              # (Windows: baslat.bat — henüz Windows'ta denenmedi)
 ./baslat.sh --port 8010      # argümanlar sunucuya geçer: --port --kaynak --dist --veri --seri
+./baslat.sh --hizlandir 10   # benzetim: --kisi 40 --hizlandir 10 --kopma 0 --anlasma-sn 30; kayıt: --kaydet iz.jsonl / --kaynak kayit --iz iz.jsonl
 ```
 
 Elle kurulum ve testler:

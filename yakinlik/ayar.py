@@ -6,6 +6,8 @@ from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
 
+from .cekirdek.cift import ESIK_ARALIGI
+
 KAYNAKLAR = ("benzetim", "kayit", "seri")
 
 
@@ -28,6 +30,7 @@ class Ayar:
     kopma: bool = True
     kaydet: Path | None = None  # her tikin paketleri bu dosyaya yazılır
     iz: Path | None = None  # --kaynak kayit ile oynatılacak dosya
+    anlasma_sn: float | None = None  # anlaşma bildirimini bu sürede zorla (rules.dealAfterS; mock'taki --anlasmaSn)
 
 
 def _tam_sayi(deger: object) -> bool:
@@ -50,7 +53,10 @@ _DENETIMLER = {
     "dist": (_metin, "metin (klasör yolu)"),
     "veri": (_metin, "metin (yol)"),
     "seri": (_metin, "metin (aygıt adı)"),
-    "esik": (_sayi, "sayı (dBm)"),
+    "esik": (
+        lambda deger: _sayi(deger) and ESIK_ARALIGI[0] <= deger <= ESIK_ARALIGI[1],
+        f"{ESIK_ARALIGI[0]} ile {ESIK_ARALIGI[1]} arası sayı (dBm)",
+    ),
 }
 # config.toml'daki [etkinlik] tablosunun anahtarı → Ayar alanı
 _ETKINLIK_ALANLARI = {"ad": "etkinlik_adi", "alt_baslik": "alt_baslik", "tarih": "tarih"}
@@ -125,6 +131,9 @@ def _komut_satirindan(ayar: Ayar, argumanlar: Sequence[str] | None) -> Ayar:
     ayristirici.add_argument("--kopma", type=int, choices=(0, 1), help="benzetimde alıcı kopması senaryosu (0: kapalı)")
     ayristirici.add_argument("--kaydet", type=Path, help="her tikin paketlerini bu dosyaya yaz (iz.jsonl)")
     ayristirici.add_argument("--iz", type=Path, help="--kaynak kayit ile oynatılacak iz dosyası")
+    ayristirici.add_argument(
+        "--anlasma-sn", dest="anlasma_sn", type=_pozitif_sayi, help="anlaşma bildirimini bu kadar sn birliktelikte zorla (deneme)"
+    )
     verilen = {ad: deger for ad, deger in vars(ayristirici.parse_args(argumanlar)).items() if deger is not None}
     if "kopma" in verilen:
         verilen["kopma"] = bool(verilen["kopma"])
