@@ -86,7 +86,8 @@ class Motor:
 
     async def calis(self) -> None:
         """Kaynağın tiklerini işler. Kaynak biterse ya da hata verirse yayın boş tiklerle sürer (İ6): zaman ve
-        alıcı yaşı ilerler, veri donar; arayüz "ALICI BAĞLI DEĞİL" gösterir, "bağlanılamıyor" göstermez."""
+        alıcı yaşı ilerler, veri donar; arayüz "ALICI BAĞLI DEĞİL" gösterir, "bağlanılamıyor" göstermez.
+        `isle` hiç hata fırlatmaz: buradaki `except` yalnız kaynağın kendi hatasını yakalar."""
         try:
             async with aclosing(self._kaynak.tikler()) as akis:
                 async for tik in akis:
@@ -99,19 +100,20 @@ class Motor:
             self.isle(Tik((self._alan.t or 0.0) + TIK_SN, ()))
 
     def isle(self, tik: Tik) -> None:
+        """Bir tiki işleyip yayınlar. Hata fırlatmaz: tek bozuk tik ne kaynağı ne de yayını düşürür."""
         try:
             self._alan.tik(tik, self._saat.simdi())
         except Exception:
-            gunluk.exception("tik işlenemedi (t=%s); yayın sürüyor", tik.t)  # tek bozuk tik yayını düşürmesin
+            gunluk.exception("tik işlenemedi (t=%s); yayın sürüyor", tik.t)
         self._yayinla()
 
     def esik_ayarla(self, dbm: float) -> None:
         self._alan.esik = dbm
-        self.anlik = self._uret()  # GET /state hemen yeni eşiği görsün; izleyicilere sıradaki tikte gider
+        self._guncelle()  # GET /state hemen yeni eşiği görsün; izleyicilere sıradaki tikte gider
 
     def sifirla(self) -> None:
         self._alan.sifirla()
-        self.anlik = self._uret()
+        self._guncelle()
 
     def abone_ol(self) -> Abone:
         abone = Abone()
@@ -125,8 +127,15 @@ class Motor:
         durum = durum_uret(self._alan, self._etkinlik, self._saat.simdi())
         return json.dumps(durum, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
 
+    def _guncelle(self) -> None:
+        """Son durumu yeniden üretir; üretilemezse öncekini tutar (izleyiciler son geçerli durumu almaya devam eder)."""
+        try:
+            self.anlik = self._uret()
+        except Exception:
+            gunluk.exception("durum üretilemedi; son geçerli durum gönderiliyor")
+
     def _yayinla(self) -> None:
-        self.anlik = self._uret()
+        self._guncelle()
         for abone in list(self._aboneler):
             if not abone.ver(self.anlik):
                 gunluk.warning("canlı akış izleyicisi yetişemiyor; bağlantısı kapatıldı")

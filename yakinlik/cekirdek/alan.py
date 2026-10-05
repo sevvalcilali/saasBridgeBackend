@@ -11,6 +11,8 @@ from .kenar import Kenarlar, kimlik_cifti
 from .kisi import Kisi, KisiDefteri, kisisiz_kart
 from .sinyal import SinyalDeposu
 
+ALICI_KOPUK_SN = 12  # brief §2: alıcıdan bu kadar süre hiç paket gelmezse bağlantı kopmuş sayılır
+
 
 class Alan:
     def __init__(
@@ -38,6 +40,7 @@ class Alan:
         self._bosta: dict[str, float] = {}  # kimlik → kesintisiz boşta saniye
         self._yalniz_bildirildi: set[str] = set()  # kimlik
         self._kayip_bildirildi: set[str] = set()  # kart
+        self._sessiz: dict[str, float] = {}  # kart → alıcı canlıyken kesintisiz duyulmadığı saniye
 
     @property
     def gecen_sn(self) -> float:
@@ -54,12 +57,19 @@ class Alan:
             self._baz = tik.t
         dt = 0.0 if self.t is None else tik.t - self.t
         self.t = tik.t
-        if not tik.paketler:
-            return  # alıcı kopuk: ölçüm yok, sayaçlar donar; saat ve görülme yaşları ilerler
-        self.sinyal.ekle(tik.paketler)
+        if tik.paketler:
+            self.sinyal.ekle(tik.paketler)
+        elif not self.alici_canli():
+            return  # alıcı kopuk: sayaçlar donar; saat, görülme ve alıcı yaşı ilerler
+        # Paketsiz ama alıcı henüz kopuk sayılmayan tik de işlenir: gerçek alıcıda bir tik boş geçebilir.
         self._ciftleri_isle(dt, duvar)
-        self._kisileri_isle(dt, duvar)
+        self._kisileri_isle(dt, duvar, {paket.kart for paket in tik.paketler})
         self.sinyal.unut(self.t, korunan=set(self.birlikte_ciftler()))
+
+    def alici_canli(self) -> bool:
+        """Alıcıdan son ALICI_KOPUK_SN içinde paket geldi mi?"""
+        yas = None if self.t is None else self.sinyal.alici_yasi(self.t)
+        return yas is not None and yas <= ALICI_KOPUK_SN
 
     def kisi(self, kart: str) -> Kisi:
         return self.defter.kart_sahibi(kart) or kisisiz_kart(kart)
@@ -101,12 +111,20 @@ class Alan:
             if not durum.birlikte and durum.ustunde_sn == 0:
                 del self._ciftler[anahtar]  # ne birlikte ne eşik üstünde: tutacak bilgi yok
 
-    def _kisileri_isle(self, dt: float, duvar: float) -> None:
+    def _kisileri_isle(self, dt: float, duvar: float, gelen: set[str]) -> None:
         birlikte_kartlar = {kart for anahtar in self.birlikte_ciftler() for kart in anahtar.split("-")}
+        # Eşik üstünde ama bir dakikası henüz dolmamış çiftler: görüşme başlarsa bekleme ona sayılır.
+        bekleyen = {
+            kart for anahtar, durum in self._ciftler.items()
+            if not durum.birlikte and durum.ustunde_sn > 0 for kart in anahtar.split("-")
+        }
         for kart in self.sahnedeki_kartlar():
             kisi = self.kisi(kart)
             yas = self.sinyal.gorulme_yasi(kart, self.t)
-            if yas is not None and yas >= bildirim.KAYIP_SN:
+            # Duyulmama yalnız alıcı canlıyken sayılır: alıcı yeniden takılınca paketler tek tek gelir, o tikte
+            # gelmeyen kart "sinyali kesildi" sayılmamalı. Hiç duyulmamış kart bildirilmez.
+            self._sessiz[kart] = 0.0 if kart in gelen else self._sessiz.get(kart, 0.0) + dt
+            if yas is not None and self._sessiz[kart] >= bildirim.KAYIP_SN:
                 if kart not in self._kayip_bildirildi:
                     self._kayip_bildirildi.add(kart)
                     self.bildirimler.append(bildirim.kayip(duvar, kisi, kart))
@@ -118,6 +136,8 @@ class Alan:
                 continue
             self._bosta[kisi.kisi_id] = self._bosta.get(kisi.kisi_id, 0.0) + dt
             onemli = kisi.rol == "investor" and kisi.yildiz >= bildirim.YALNIZ_EN_AZ_YILDIZ
-            if onemli and self._bosta[kisi.kisi_id] >= bildirim.YALNIZ_SN and kisi.kisi_id not in self._yalniz_bildirildi:
+            # Biriyle yan yana bekliyorsa uyarı ertelenir: görüşme başlarsa o dakika görüşmeye sayılır.
+            yalniz = self._bosta[kisi.kisi_id] >= bildirim.YALNIZ_SN and kart not in bekleyen
+            if onemli and yalniz and kisi.kisi_id not in self._yalniz_bildirildi:
                 self._yalniz_bildirildi.add(kisi.kisi_id)
                 self.bildirimler.append(bildirim.yalniz(duvar, kisi, kart))

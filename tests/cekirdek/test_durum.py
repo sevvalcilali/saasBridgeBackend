@@ -57,6 +57,19 @@ def test_gorusmedeki_cift_kisilerde_canli_ciftlerde_ve_istatistikte_tutarli():
     ]
 
 
+def test_ayni_anda_birden_cok_gorusmede_sayilar_kisiye_gore():
+    # Mehmet (girişimci) iki yatırımcıyla, Ayşe (yatırımcı) Mehmet'le ve bir misafirle birlikte.
+    salon = Salon().gecir(30.0, AYSE_MEHMET)
+    salon.gecir(60.0, {("2", "3"): YAKIN, ("3", "5"): YAKIN, ("2", "4"): YAKIN})
+    d = durum(salon)
+
+    ayse, mehmet, zeynep, emre = (kisi(d, k) for k in ("2", "3", "4", "5"))
+    assert (mehmet["live"], mehmet["withName"]) == (1.5, "Ayşe Demir, Emre Yılmaz")  # en uzun görüşmesi
+    assert ayse["withName"] == "Nova Robotik, Zeynep Şahin"
+    assert [k["invPeers"] for k in (ayse, mehmet, zeynep, emre)] == [1, 2, 0, 1]  # yalnız karşı rol
+    assert d["stats"] == {"done": 0, "livePairs": 3, "mixedMin": 2.5, "deals": 0, "reached": 1, "founders": 1}
+
+
 def test_esik_ustu_ama_henuz_birlikte_degil_ayrimi_gorunur():
     # Kurulum ekranı "başlıyor…" durumunu above ∧ ¬together'dan çıkarır.
     d = durum(Salon().gecir(30.0, AYSE_MEHMET))

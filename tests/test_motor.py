@@ -147,3 +147,46 @@ def test_ayarlardan_benzetimle_kurulur_kisiler_kadrodan():
     assert d["threshold"] == -68
     assert d["rules"] == {"dealAfterS": 30}
     assert d["event"]["name"] == Ayar().etkinlik_adi
+
+
+# --- inceleme (B2): hata yalıtımı ---
+
+async def test_durum_uretilemeyen_tik_kaynagi_birakmaz_son_durum_yeniden_gider(monkeypatch):
+    import yakinlik.motor as motor_modulu
+
+    bekle = durduran_bekleme(1)
+    motor = motor_kur([tik_uret(0.5), tik_uret(1.0), tik_uret(1.5)], bekle=bekle)
+    asil, cagri = motor_modulu.durum_uret, []
+
+    def bir_kez_bozuk(*argumanlar):
+        cagri.append(1)
+        if len(cagri) == 1:
+            raise KeyError("beklenmeyen")
+        return asil(*argumanlar)
+
+    monkeypatch.setattr(motor_modulu, "durum_uret", bir_kez_bozuk)
+    abone = motor.abone_ol()
+
+    with pytest.raises(Dur):
+        await motor.calis()
+
+    mesajlar = [json.loads(veri) for veri in abone.bekleyen()]
+    assert [m["elapsed"] for m in mesajlar] == [0.0, 1.0, 1.5]  # bozuk tikte önceki durum yeniden gitti
+    assert mesajlar[-1]["receiverAge"] == 0.0  # kaynak bırakılmadı, veri gelmeye devam etti
+
+
+async def test_durum_hic_uretilemese_de_motor_durmaz(monkeypatch):
+    import yakinlik.motor as motor_modulu
+
+    bekle = durduran_bekleme(3)
+    motor = motor_kur([tik_uret(0.5)], bekle=bekle)
+
+    def hep_bozuk(*_):
+        raise KeyError("beklenmeyen")
+
+    monkeypatch.setattr(motor_modulu, "durum_uret", hep_bozuk)
+
+    with pytest.raises(Dur):  # döngü bekleme fonksiyonuna kadar sürdü; KeyError ile ölmedi
+        await motor.calis()
+
+    assert bekle.istenen == [0.5, 0.5, 0.5]

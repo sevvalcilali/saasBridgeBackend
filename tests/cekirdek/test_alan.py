@@ -74,12 +74,13 @@ def test_esik_degisince_karar_yeni_esikle_verilir():
 def test_alici_kopukken_sayaclar_donar_gorusme_surer():
     salon = Salon().gecir(60.0, AYSE_MEHMET)
 
-    salon.gecir(20.0, alici_kopuk=True)
+    salon.gecir(40.0, alici_kopuk=True)
 
     assert list(salon.alan.birlikte_ciftler()) == ["2-3"]
-    assert salon.alan.kenarlar.dakika[("k1", "k2")] == 1.0  # kopukken süre birikmez
-    assert salon.alan.gecen_sn == 80.0  # etkinlik saati işler
-    assert salon.alan.sinyal.alici_yasi(salon.t) == 20.0
+    # Alıcı 12 sn susunca kopuk sayılır; ondan sonra süre birikmez.
+    assert salon.alan.kenarlar.dakika[("k1", "k2")] == pytest.approx(72.0 / 60)
+    assert salon.alan.gecen_sn == 100.0  # etkinlik saati işler
+    assert salon.alan.sinyal.alici_yasi(salon.t) == 40.0
 
 
 def test_dinleyici_cihaz_hicbir_gorusmeye_girmez():
@@ -253,3 +254,69 @@ def test_ilk_tikte_etkinlik_saati_baslangictan_sayilir():
     alan.tik(tik_uret(37.5), 0.0)
 
     assert alan.gecen_sn == 0.5
+
+
+# --- inceleme (B2) ---
+
+def test_alici_on_iki_saniyeden_kisa_susarsa_sayaclar_islemeye_devam_eder():
+    # Gerçek alıcıda bir tik boş geçebilir; brief §2: alıcı ancak 12 sn hiç paket gelmezse kopmuş sayılır.
+    salon = Salon()
+    for _ in range(120):
+        salon.gecir(0.5, AYSE_MEHMET).gecir(0.5, alici_kopuk=True)  # her iki tikten biri boş
+
+    assert list(salon.alan.birlikte_ciftler()) == ["2-3"]
+    assert salon.alan.kenarlar.dakika[("k1", "k2")] == pytest.approx(2.0)  # ilk tikten beri, boş tikler dahil
+
+
+def test_kopmadan_donunce_kopuk_sure_gorusmeye_eklenmez():
+    salon = Salon().gecir(60.0, AYSE_MEHMET).gecir(30.0, alici_kopuk=True)
+
+    salon.gecir(0.5, AYSE_MEHMET)
+
+    # 60 sn görüşme + kopmanın ilk 12 sn'si (alıcı henüz kopuk sayılmıyor) + dönüş tiki
+    assert salon.alan.kenarlar.dakika[("k1", "k2")] == pytest.approx(72.5 / 60)
+    assert list(salon.alan.birlikte_ciftler()) == ["2-3"]
+
+
+def test_uzun_kopmadan_sonra_ilk_tikte_gelmeyen_kartlar_kayip_sayilmaz():
+    # Alıcı yeniden takılınca paketler tek tek gelir; o tikte gelmeyen kart "sinyali kesildi" olmamalı.
+    salon = Salon().gecir(5.0).gecir(90.0, alici_kopuk=True)
+
+    salon.gecir(0.5, sessiz={"3", "4", "5", "14"})
+
+    assert "lost" not in turler(salon.alan)
+
+
+def test_alici_canliyken_susan_kart_yine_bir_dakikada_kayip():
+    salon = Salon().gecir(5.0).gecir(20.0, alici_kopuk=True).gecir(59.5, sessiz={"4"})
+
+    once = turler(salon.alan)
+    salon.gecir(1.0, sessiz={"4"})
+
+    # Duyulmama yalnız alıcı canlıyken sayılır: kopmanın ilk 12 sn'si + 59,5 sn = 71,5 sn ≥ 60 → bildirildi.
+    assert once == ["lost"]
+    assert turler(salon.alan) == ["lost"]  # bir kez
+
+
+def test_bekleme_dakikasinda_yalniz_uyarisi_dusmez_gorusme_baslarsa_hic_dusmez():
+    salon = Salon().gecir(330.0).gecir(60.0, AYSE_MEHMET)
+
+    assert "idle_investor" not in turler(salon.alan)
+    assert salon.alan.bosta_sn("2") == 0.0
+
+
+def test_bir_dakikaya_varmayan_yan_yana_gelisten_sonra_yalniz_uyarisi_duser():
+    salon = Salon().gecir(330.0).gecir(40.0, AYSE_MEHMET)
+    bekleme_icinde = turler(salon.alan)
+    salon.gecir(10.0, {("2", "3"): UZAK})
+
+    assert bekleme_icinde == []
+    assert turler(salon.alan) == ["idle_investor"]
+
+
+def test_ayni_cifte_ikinci_uzun_gorusmede_yeniden_anlasma_bildirimi_dusmez():
+    salon = Salon().gecir(480.0, AYSE_MEHMET).gecir(30.0, {("2", "3"): UZAK})
+
+    salon.gecir(600.0, AYSE_MEHMET)  # ikinci görüşme de 8 dakikayı geçiyor
+
+    assert turler(salon.alan) == ["deal", "repeat"]

@@ -1,4 +1,5 @@
-"""/state ve /control (PLAN B2.5, Bölüm 8.1). /events gerçek sunucuyla tests/test_main.py'de sınanır."""
+"""/state, /events ve /control (PLAN B2.5, Bölüm 8.1). Canlı akışın zamanlaması gerçek sunucuyla tests/test_main.py'de."""
+import asyncio
 import json
 
 import pytest
@@ -111,3 +112,20 @@ async def test_state_yolu_statik_dosyaya_dusmez(istemci, dist):
     yanit = await istemci.get("/state")
 
     assert yanit.headers["content-type"].startswith("application/json")
+
+
+async def test_canli_akis_ilk_durumu_tik_beklemeden_verir_sonra_her_tiki(motor):
+    from yakinlik.http.durum_uclari import durum_uclari
+
+    (events,) = [rota for rota in durum_uclari(motor).routes if rota.path == "/events"]
+    yanit = await events.endpoint()
+    akis = yanit.body_iterator
+    try:
+        ilk = await asyncio.wait_for(anext(akis), timeout=0.2)  # motor hiç tiklemedi
+        motor.isle(tik_uret(0.5))
+        ikinci = await asyncio.wait_for(anext(akis), timeout=0.2)
+
+        assert ilk.startswith(b"data: {") and ilk.endswith(b"\n\n")
+        assert json.loads(ikinci[6:])["elapsed"] == 0.5
+    finally:
+        await akis.aclose()

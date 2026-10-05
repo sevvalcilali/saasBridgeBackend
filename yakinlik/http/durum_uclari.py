@@ -6,9 +6,8 @@ from collections.abc import AsyncIterator
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 
+from ..cekirdek.cift import ESIK_ARALIGI
 from ..motor import Motor
-
-ESIK_ARALIGI = (-100, -20)  # dBm
 
 
 def _gecerli_esik(deger: object) -> bool:

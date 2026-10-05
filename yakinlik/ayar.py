@@ -6,6 +6,8 @@ from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
 
+from .cekirdek.cift import ESIK_ARALIGI
+
 KAYNAKLAR = ("benzetim", "kayit", "seri")
 
 
@@ -51,7 +53,10 @@ _DENETIMLER = {
     "dist": (_metin, "metin (klasör yolu)"),
     "veri": (_metin, "metin (yol)"),
     "seri": (_metin, "metin (aygıt adı)"),
-    "esik": (_sayi, "sayı (dBm)"),
+    "esik": (
+        lambda deger: _sayi(deger) and ESIK_ARALIGI[0] <= deger <= ESIK_ARALIGI[1],
+        f"{ESIK_ARALIGI[0]} ile {ESIK_ARALIGI[1]} arası sayı (dBm)",
+    ),
 }
 # config.toml'daki [etkinlik] tablosunun anahtarı → Ayar alanı
 _ETKINLIK_ALANLARI = {"ad": "etkinlik_adi", "alt_baslik": "alt_baslik", "tarih": "tarih"}

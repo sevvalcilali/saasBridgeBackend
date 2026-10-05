@@ -9,6 +9,7 @@ from enum import Enum
 
 GIRIS_SN = 60
 CIKIS_SN = 15
+ESIK_ARALIGI = (-100, -20)  # dBm; Kurulum ekranı ve /control bu aralığı kabul eder
 
 
 class Gecis(Enum):
