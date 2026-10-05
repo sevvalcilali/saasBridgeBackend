@@ -65,6 +65,10 @@ def api_uclari(motor: Motor) -> APIRouter:
     async def kisi_sil(kisi_id: str) -> JSONResponse:
         return JSONResponse({"ok": True}) if motor.kisi_sil(kisi_id) else _hata(404, "kişi yok")
 
+    @yonlendirici.get("/cards")
+    async def kartlar() -> list[dict]:
+        return motor.kartlar()
+
     @yonlendirici.post("/assign")
     async def ata(istek: Request) -> JSONResponse:
         govde = await _json(istek)

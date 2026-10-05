@@ -27,6 +27,23 @@ def js_yuvarla(deger: float, basamak: int = 0) -> float:
     return math.floor(deger * carpan + 0.5) / carpan
 
 
+def kartlar_uret(alan: Alan) -> list[dict]:
+    """GET /api/cards: alıcının duyduğu bütün kartlar (atanmış, masadaki yedek, iade dönmüş, dinleyici), numara sırasıyla.
+    Masa 1–3 sn'de bir yoklar; ucuz olmalı."""
+    sonuc = []
+    for kart in sorted(alan.sinyal.duyulan_kartlar(), key=lambda k: (not k.isdecimal(), int(k) if k.isdecimal() else 0, k)):
+        yas, pil, alici_rssi = alan.sinyal.kart_bilgisi(kart, alan.t)
+        sahip = alan.defter.kart_sahibi(kart)
+        sonuc.append({
+            "kart": kart,
+            "rssiAlici": None if alici_rssi is None else js_yuvarla(alici_rssi, 1),
+            "seenAgo": js_yuvarla(yas, 1),
+            "atanan": None if sahip is None else sahip.kisi_id,
+            "pil": pil,
+        })
+    return sonuc
+
+
 def durum_uret(alan: Alan, etkinlik: Etkinlik, duvar: float) -> dict:
     simdi = alan.t
     sinyaller = [] if simdi is None else alan.sinyal.sinyaller(simdi)

@@ -260,3 +260,16 @@ def test_eski_olcumler_bellekte_birikmez():
         depo.unut(simdi=t)
 
     assert depo.olcum_sayisi <= 200  # yalnız grafiğin gerektirdiği son ~95 sn tutulur
+
+
+# --- kart bilgisi (B4: /api/cards) ---
+
+def test_kart_bilgisi_en_yeni_paketten_pil_ve_alicinin_duydugu_guc():
+    depo = SinyalDeposu()
+    depo.ekle([Paket("7", (), 88, 1.0, alici_rssi=-70.0)])
+    depo.ekle([Paket("7", (), 87, 2.0, alici_rssi=-60.0), Paket("101", (), None, 2.0)])
+
+    assert depo.kart_bilgisi("7", simdi=5.0) == (3.0, 87, -60.0)
+    assert depo.kart_bilgisi("101", simdi=5.0) == (3.0, None, None)
+    assert depo.kart_bilgisi("9", simdi=5.0) is None
+    assert depo.duyulan_kartlar() == ["7", "101"]

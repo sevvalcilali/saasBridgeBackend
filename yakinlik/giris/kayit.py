@@ -20,7 +20,8 @@ if TYPE_CHECKING:
 
 def _satir(tik: Tik) -> str:
     paketler = [
-        {"kart": paket.kart, "duyulanlar": [list(duyulan) for duyulan in paket.duyulanlar], "pil": paket.pil, "t": paket.t}
+        {"kart": paket.kart, "duyulanlar": [list(duyulan) for duyulan in paket.duyulanlar], "pil": paket.pil, "t": paket.t,
+         "alici_rssi": paket.alici_rssi}
         for paket in tik.paketler
     ]
     # allow_nan=False: sonlu olmayan sayı (NaN) yazılırken yakalansın; JSON'da geçerli değildir.
@@ -43,6 +44,8 @@ def _tik(satir: str) -> Tik:
     paketler = []
     for paket in veri["paketler"]:
         kart, pil, t = paket["kart"], paket["pil"], paket["t"]
+        alici_rssi = paket.get("alici_rssi")  # B4'ten önceki izlerde yok
+        _denetle(alici_rssi is None or _sayi(alici_rssi), "alici_rssi", "sonlu sayı ya da null", alici_rssi)
         _denetle(isinstance(kart, str), "kart", "metin", kart)
         _denetle(pil is None or (isinstance(pil, int) and not isinstance(pil, bool)), "pil", "tam sayı ya da null", pil)
         _denetle(_sayi(t), "t", "sonlu sayı", t)
@@ -51,7 +54,7 @@ def _tik(satir: str) -> Tik:
             _denetle(isinstance(diger, str), "duyulan kart", "metin", diger)
             _denetle(_sayi(rssi), "dBm", "sonlu sayı", rssi)
             duyulanlar.append((diger, rssi))
-        paketler.append(Paket(kart, tuple(duyulanlar), pil, t))
+        paketler.append(Paket(kart, tuple(duyulanlar), pil, t, alici_rssi))
     return Tik(veri["t"], tuple(paketler))
 
 

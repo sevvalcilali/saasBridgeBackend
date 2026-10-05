@@ -271,3 +271,12 @@ def test_kirk_besinci_saniyeden_once_verilen_kart_14_ikinci_kez_eklenmez():
     tik = benzetim.tik(0.5)
 
     assert "14" not in gonderenler(tik)
+
+
+def test_alici_kartlari_masadan_zayif_duyar_degerler_tekrarlanabilir():
+    # Mock: alıcı kartları −72 − (no mod 15) ± 3 dBm duyar; kimse kartı alıcıya yaklaştırmıyor ("yaklaştır" yalnız mock'ta).
+    tikler = kos(Benzetim(kisi=25, tohum=1), 30.0)
+    gucler = [paket.alici_rssi for tik in tikler for paket in tik.paketler]
+
+    assert all(-90.0 <= guc <= -69.0 for guc in gucler)
+    assert kos(Benzetim(kisi=25, tohum=1), 30.0) == tikler

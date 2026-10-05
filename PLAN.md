@@ -20,7 +20,7 @@
   derlenmiş arayüzü ve `/api/health`'i veriyor; veri uçları yok. B1 (giriş katmanı + sinyal) bitti ve onaylandı (05.10.2026; `docs/B1_NOT.md`). B2 (canlı durum) bitti ve onaylandı
   (05.10.2026; `docs/B2_NOT.md`): Pano, Kurulum ve Sunum gerçek sunucudan (benzetim) canlı veri alıyor.
   B3 (karşılama masası) bitti ve onaylandı (05.10.2026; `docs/B3_NOT.md`).
-  Sıradaki: B4 (`/api/cards`; ayrı onay).
+  B4 (`/api/cards`) kodu yazıldı — `b4-kartlar` dalında, onay bekliyor (`docs/B4_NOT.md`). Sıradaki: B5 (görüşme kayıtları, rapor).
 - **Çalıştırma:** `./baslat.sh` (ya da `.venv/bin/python -m yakinlik`) → `http://localhost:8002`; testler `.venv/bin/pytest`.
 - **Kardeş repo:** https://github.com/sevvalcilali/SaasBridge — arayüz, mock sunucu (`mock-server/mock.js`, davranışın çalışan
   şartnamesi), sözleşme belgesi (`SUNUCUDAN_ISTENENLER.md`), gereksinim belgesi (`UI_TASARIM_BRIEF.md` §2, §5, §9).
@@ -629,7 +629,9 @@ commit'lerini alır, sonunda `docs/Bn_NOT.md` yazılır. Süreler tek kişi, tam
 - **Kabul:** `mock-server/{api,degisim,iade,iceaktar}.test.js` senaryoları `tests/`'te yeşil ve `SUNUCU=` ile de yeşil;
   tarayıcıda **Faz 2 kabul akışı 11/11** (kart ver / değiştir / iade / geri al / CSV / kayıp kart) gerçek sunucuyla.
 
-#### B4 ⬜ Kartlar — `GET /api/cards` (tahmin: 1–2 gün)
+#### B4 🟡 Kartlar — `GET /api/cards` (tahmin: 1–2 gün) — kod bitti (05.10.2026, dal `b4-kartlar`), onay bekliyor
+- **Yapıldı** (`docs/B4_NOT.md`): `/api/cards` (duyulan bütün kartlar; en yeni paketten pil ve alıcı gücü); paketlere
+  `alici_rssi` (eski izler uyumlu). `pytest` 359/359. Tarayıcı doğrulaması B5 ile.
 - Alıcının duyduğu tüm kartlar (atanmış, yedek, iade dönmüş, 100+), `rssiAlici`, `seenAgo`, `pil`, `atanan`; benzetimde
   yedekler masada −80 civarı, "yaklaştır" senaryosu **yok** (mock'un `/api/yaklastir`'ı demo; gerçek kart yaklaştırılır).
   Yedek kartlar `people`'a **girmez** (Soru 1 varsayılanı: yalnız bir görüşmeye girince eklenir).
