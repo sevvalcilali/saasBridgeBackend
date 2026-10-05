@@ -17,8 +17,8 @@
 ## ⏩ DEVİR NOTU (05.10.2026)
 
 - **Durum:** B0 (iskelet) bitti ve onaylandı (04.10.2026; teslim notu `docs/B0_NOT.md`). Sunucu
-  derlenmiş arayüzü ve `/api/health`'i veriyor; veri uçları yok. B1 (giriş katmanı + sinyal) bitti ve onaylandı (05.10.2026; `docs/B1_NOT.md`). B2 kodu yazıldı — `b2-durum-yayin` dalında,
-  inceleme ve onay bekliyor (`docs/B2_NOT.md`): Pano, Kurulum ve Sunum gerçek sunucudan (benzetim) canlı veri alıyor.
+  derlenmiş arayüzü ve `/api/health`'i veriyor; veri uçları yok. B1 (giriş katmanı + sinyal) bitti ve onaylandı (05.10.2026; `docs/B1_NOT.md`). B2 (canlı durum) bitti ve onaylandı
+  (05.10.2026; `docs/B2_NOT.md`): Pano, Kurulum ve Sunum gerçek sunucudan (benzetim) canlı veri alıyor.
   Sıradaki: B3 (karşılama masası; ayrı onay).
 - **Çalıştırma:** `./baslat.sh` (ya da `.venv/bin/python -m yakinlik`) → `http://localhost:8002`; testler `.venv/bin/pytest`.
 - **Kardeş repo:** https://github.com/sevvalcilali/SaasBridge — arayüz, mock sunucu (`mock-server/mock.js`, davranışın çalışan
@@ -489,7 +489,7 @@ CREATE TABLE ayar      (anahtar TEXT PRIMARY KEY, deger TEXT);               -- 
 
 Durum işaretleri: ⬜ onay bekliyor · 🟡 devam ediyor · ✅ bitti ve onaylandı
 
-### 🟡 Faz B — Gerçek sunucu (Python) (planlandı 03.10.2026; B0 bitti 04.10.2026, B1 bitti 05.10.2026, sonraki fazlar ayrı onayla)
+### 🟡 Faz B — Gerçek sunucu (Python) (planlandı 03.10.2026; B0 bitti 04.10.2026, B1 ve B2 bitti 05.10.2026, sonraki fazlar ayrı onayla)
 
 **Amaç:** Arayüzün mock'tan aldığı her şeyi gerçek bir sunucudan, aynı sözleşmeyle vermek. Gerekçe, mimari, veri modeli ve
 kurallar Bölüm 1–13'te; **burası uygulama sırası ve kabul ölçütleridir.** Her B fazı ayrı onayla başlar (Bölüm 0.1), kendi
@@ -561,7 +561,7 @@ commit'lerini alır, sonunda `docs/Bn_NOT.md` yazılır. Süreler tek kişi, tam
 - **Doğrulama / kabul:** `pytest` yeşil; benzetim 60 sn koşup `signals` sayısı ve `history` uzunluğu mock'la aynı büyüklükte
   (±%10); kayıt → oynatma aynı `signals` dizisini üretir (deterministik).
 
-#### B2 🟡 `/state` · `/events` · `/control` eşdeğerliği (tahmin: 3 gün) — kod bitti (05.10.2026, dal `b2-durum-yayin`), onay bekliyor
+#### B2 ✅ `/state` · `/events` · `/control` eşdeğerliği (tahmin: 3 gün) — bitti ve onaylandı (05.10.2026)
 - **Yapıldı** (ayrıntı ve gerekçeler: `docs/B2_NOT.md`):
   - B2.1 ✅ Karar: 10 sn ortancası eşiğin üstünde **kesintisiz 60 sn** → birlikte; bekleme görüşmeye sayılır; 15 sn çıkış
     (16.3 madde 1, Şevval 05.10.2026). Duyulmayan çift eşik altında sayılır.

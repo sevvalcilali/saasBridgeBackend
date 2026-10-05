@@ -1,6 +1,6 @@
 # B2 — /state · /events · /control: teslim notu
 
-> 05.10.2026 · dal `b2-durum-yayin` · Durum: **kod bitti, bağımsız incelemeden geçti; Şevval'in onayı bekleniyor**
+> 05.10.2026 · dal `b2-durum-yayin` · Durum: **bitti — bağımsız incelemeden geçti, Şevval onayladı (05.10.2026)**
 
 ## Ne yapıldı
 
