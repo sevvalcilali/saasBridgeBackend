@@ -88,9 +88,14 @@
 1. `pytest` tamamen yeşil. 2. Her adım kendi commit'i; bu dosyada ilgili adım ✅ + kısa "Yapıldı:" notu; faz sonunda
 `docs/Bn_NOT.md`.
 
-**Tempo (Şevval, 05.10.2026):** bağımsız inceleme **iki fazda bir** (B3+B4, B5+B6, …); kodu bilerek bozma denemeleri
-**yalnız kritik kurallarda** (karar kuralları, veri kaybı); tarayıcı denemesi (SaasBridge `npm run build` + 390 / 768 /
-1280) **yalnız büyük fazların sonunda**. Kod yine testli ve temiz; daha hızlı ilerlenir.
+**Tempo — hızlı ama güvenli (Şevval, 05.10.2026):**
+- Her fazda mutlaka: yeni her davranış için test; commit'ten önce bütün test paketi yeşil (kırmızıyla sonraki faza
+  geçilmez); kritik kurallarda (yetki, ödeme, veri silme gibi) kodu bilerek bozma denemesi, faz başına en çok 3–5 kural;
+  emin olunmayan gereksinimde tahmin yok, Şevval'e sorulur.
+- Hafifletilenler: ayrı inceleme iki fazda bir ve proje sonunda bir kez daha; tarayıcı testi yalnız arayüzü değiştiren
+  büyük fazların sonunda (kişiler ad değil ID ile seçilir); faz başına tek commit ve 3–5 satırlık özet; ortamdan
+  kaynaklı küçük sorunda bir kez temizle-tekrar dene, tekrar ederse araştır ya da söyle; komutlar bash ile (zsh değil).
+- Hiçbir zaman kısaltılmaz: veritabanı şeması değişiklikleri, geri alınamayan işlemler, güvenlikle ilgili kod.
 
 ### 0.5 Tamamlanma tanımı (her faz)
 - [ ] Çekirdek değişikliği birim testli; `pytest` yeşil; `ruff`/`mypy` (varsa) temiz.
