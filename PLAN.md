@@ -23,7 +23,9 @@
   şartnamesi), sözleşme belgesi (`SUNUCUDAN_ISTENENLER.md`), gereksinim belgesi (`UI_TASARIM_BRIEF.md` §2, §5, §9).
 - **Yerel düzen (öneri):** iki repo yan yana: `…/SaasBridge` ve `…/saasBridgeBackend`. Sunucu `../SaasBridge/dist`'i servis
   eder; geliştirmede SaasBridge'de `npx vite`, burada `python -m yakinlik --kaynak benzetim`.
-- **Donanım yok.** Benzetim kaynağıyla ilerlenir; seri paket biçimi gelince B8.
+- **Donanım var, burada değil.** Kartlar ve alıcı çalışıyor ve ekipçe test edildi (05.10.2026, Şevval). Geliştirme
+  ortamında yok: benzetim yalnız geliştirme süresince yerini tutuyor. Yazılım bitince Şevval sistemi verecek, gerçek
+  donanıma bağlama B8'de yapılacak.
 
 ## Tek sayfada özet
 
@@ -115,7 +117,7 @@
 ### 2.1 Bugün elde olan
 | Parça | Nerede | Durum |
 |---|---|---|
-| Kart yazılımı (C3) + alıcı (ESP32-S3) | Muhittin | Çalışıyor; paket biçimi **belgelenmemiş** (B8 girdisi) |
+| Kart yazılımı (C3) + alıcı (ESP32-S3) | Muhittin | Çalışıyor, ekipçe test edildi; paket biçimi **belgelenmemiş** (B8 girdisi) |
 | `server.py` | Muhittin | Seri okuma, yumuşatma, eşik −72, 5 sn giriş / 15 sn çıkış, 12 sn paket yok = kopuk |
 | `pano/pano.py` | Muhittin | Kişi/rol ekleme, bildirim kuralları, `/`, `/state`, `/events`, `/control`; 2 Hz SSE; `localhost:8002` |
 | Arayüz | `SaasBridge` `src/` | Faz 0–5 bitti, `dist/` statik servis edilir |
@@ -146,7 +148,7 @@
 |---|---|---|
 | Dil / çatı | **Python 3.11 + FastAPI + uvicorn + pyserial**, SQLite (stdlib) | Gerekçe Bölüm 3.2–3.3; Muhittin'in Python kodu taşınabilir |
 | Konum | **Ayrı repo** (`saasBridgeBackend`) | Arayüz reposuyla karışmasın; sözleşme belgesi arayüz reposunda kalır |
-| Donanım | **Yok → benzetimle başlanır** | Seri katman arayüz olarak bırakılır, B8'de tamamlanır |
+| Donanım | **Var ama geliştirme ortamında yok → benzetimle ilerlenir** | Kartlar ve alıcı çalışıyor ve test edildi (05.10.2026, Şevval); yazılım bitince sistem verilecek, seri katman B8'de bağlanır |
 | Sözleşme | `SaasBridge/SUNUCUDAN_ISTENENLER.md` + brief §5.1 **değişmez** | Değişiklik gerekiyorsa üç yerde birlikte: sözleşme belgesi, `http/semalar.py`, `mock.js` |
 | Dal düzeni | **Her faz kendi dalında** (`b0-iskelet` gibi), faz sonunda PR; Şevval onaylayınca `main`'e birleşir (04.10.2026) | `main` hep onaylanmış hali gösterir; arayüz reposuna yazma her seferinde ayrı onayla |
 
