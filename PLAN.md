@@ -19,7 +19,7 @@
 - **Durum:** B0 (iskelet) bitti ve onaylandı (04.10.2026; teslim notu `docs/B0_NOT.md`). Sunucu
   derlenmiş arayüzü ve `/api/health`'i veriyor; veri uçları yok. B1 (giriş katmanı + sinyal) bitti ve onaylandı (05.10.2026; `docs/B1_NOT.md`). B2 (canlı durum) bitti ve onaylandı
   (05.10.2026; `docs/B2_NOT.md`): Pano, Kurulum ve Sunum gerçek sunucudan (benzetim) canlı veri alıyor.
-  B3 (karşılama masası) kodu yazıldı — `b3-karsilama-masasi` dalında, inceleme ve onay bekliyor (`docs/B3_NOT.md`).
+  B3 (karşılama masası) bitti ve onaylandı (05.10.2026; `docs/B3_NOT.md`).
   Sıradaki: B4 (`/api/cards`; ayrı onay).
 - **Çalıştırma:** `./baslat.sh` (ya da `.venv/bin/python -m yakinlik`) → `http://localhost:8002`; testler `.venv/bin/pytest`.
 - **Kardeş repo:** https://github.com/sevvalcilali/SaasBridge — arayüz, mock sunucu (`mock-server/mock.js`, davranışın çalışan
@@ -499,7 +499,7 @@ CREATE TABLE ayar      (anahtar TEXT PRIMARY KEY, deger TEXT);               -- 
 
 Durum işaretleri: ⬜ onay bekliyor · 🟡 devam ediyor · ✅ bitti ve onaylandı
 
-### 🟡 Faz B — Gerçek sunucu (Python) (planlandı 03.10.2026; B0 bitti 04.10.2026, B1 ve B2 bitti 05.10.2026, sonraki fazlar ayrı onayla)
+### 🟡 Faz B — Gerçek sunucu (Python) (planlandı 03.10.2026; B0 bitti 04.10.2026, B1–B3 bitti 05.10.2026, sonraki fazlar ayrı onayla)
 
 **Amaç:** Arayüzün mock'tan aldığı her şeyi gerçek bir sunucudan, aynı sözleşmeyle vermek. Gerekçe, mimari, veri modeli ve
 kurallar Bölüm 1–13'te; **burası uygulama sırası ve kabul ölçütleridir.** Her B fazı ayrı onayla başlar (Bölüm 0.1), kendi
@@ -611,7 +611,7 @@ commit'lerini alır, sonunda `docs/Bn_NOT.md` yazılır. Süreler tek kişi, tam
   kabul ölçütleri; alıcı kopması penceresinde (120. sn) "ALICI BAĞLI DEĞİL" bandı çıkıyor ve "bağlanılamıyor" **çıkmıyor**
   (yayın 2 Hz sürüyor); 1,5 sn'de ≥2 SSE mesajı; eşik kaydırıcısı değiştirip geri okuyor.
 
-#### B3 🟡 Kişi kayıt defteri + atama + CSV (tahmin: 3 gün) — kod bitti (05.10.2026, dal `b3-karsilama-masasi`), onay bekliyor
+#### B3 ✅ Kişi kayıt defteri + atama + CSV (tahmin: 3 gün) — bitti ve onaylandı (05.10.2026)
 - **Yapıldı** (ayrıntı ve gerekçeler: `docs/B3_NOT.md`):
   - `kisi.py` (tam), `atama.py` (ata / iade / geri al / değişim + atama geçmişi kaydı), `csv_ice.py`, `api_uclari.py`;
     benzetime haber (`kart_ver` / `kart_al`). `semalar.py` yok: gövdeler elle ayrıştırılıyor (16.3 madde 5).

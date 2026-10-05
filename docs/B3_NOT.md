@@ -1,6 +1,6 @@
 # B3 — Karşılama masası: teslim notu
 
-> 05.10.2026 · dal `b3-karsilama-masasi` · Durum: **kod bitti; Şevval'in onayı bekleniyor** (bağımsız inceleme B4 ile birlikte — iki fazda bir)
+> 05.10.2026 · dal `b3-karsilama-masasi` · Durum: **bitti — Şevval onayladı (05.10.2026)**; bağımsız inceleme B4 ile birlikte (iki fazda bir)
 
 ## Ne yapıldı
 
