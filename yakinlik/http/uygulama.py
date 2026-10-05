@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Res
 from .. import __surum__
 from ..ayar import Ayar
 from ..motor import Motor
+from .api_uclari import api_uclari
 from .durum_uclari import durum_uclari
 
 # Tür tablosu elle: Windows'ta Python `mimetypes` kayıt defterinden .js için text/plain
@@ -60,6 +61,7 @@ def uygulama_olustur(ayar: Ayar, motor: Motor | None = None) -> FastAPI:
         return {"ok": True, "surum": __surum__, "kaynak": ayar.kaynak}
 
     uygulama.include_router(durum_uclari(motor))
+    uygulama.include_router(api_uclari(motor))
 
     # İki yakalayıcı uç en sonda kalmalı: sonra eklenen uçları gölgede bırakırlar.
     # Tanımlı olmayan her /api ucu (mock'a özgü /api/demo, /api/yaklastir, /api/demo/tut dahil).

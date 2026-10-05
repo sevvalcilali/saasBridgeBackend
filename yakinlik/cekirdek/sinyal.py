@@ -154,6 +154,10 @@ class SinyalDeposu:
         son = self._kart_son.get(kart)
         return None if son is None else simdi - son
 
+    def duyuldu_mu(self, kart: str) -> bool:
+        """Kartın en az bir paketi alıcıya ulaştı mı?"""
+        return kart in self._kart_son
+
     def alici_yasi(self, simdi: float) -> float | None:
         """Alıcıdan gelen son paketten beri geçen süre (receiverAge); hiç veri gelmediyse None."""
         return None if self._alici_son is None else simdi - self._alici_son
