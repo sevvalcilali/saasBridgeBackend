@@ -269,7 +269,7 @@ saasBridgeBackend/
 | **Atama** (`Atama`) | `(kisiId, kart, baslangic_t)` | `bitis_t\|null, islem(ata/iade/geri_al/degisim)` | Zaman damgalı geçmiş (`GET /api/assignments`); açık atama = `bitis_t null` |
 | **Kenar** (`Kenar`) | `kimlikCifti` (`"k3\|k7"`, sıralı) | `dakika, karsiRol` | Kişi kimliği; kişisiz kart için `"kart:14"`; `/state.edges` çevrimle üretilir |
 | **Görüşme kaydı** (`Oturum`) | `(kimlikA, kimlikB, start)` | `end\|null` (etkinlik saniyesi) | `/api/sessions`; kart iade/değişiminde açık kayıt kapanır |
-| **Çift ölçümü** (`CiftDurumu`) | `(kartA, kartB)` küçük-büyük | `olcumler[(t, ab, ba, value)], ustundeSn, altindaSn, together, birlikteSn, anlasmaVerildi, sonDuyulma_t` | Bellekte; diske yazılmaz (yeniden başlatmada 5/15 sn gecikmeyle kendini toparlar) |
+| **Çift ölçümü** (`CiftDurumu`) | `(kartA, kartB)` küçük-büyük | `olcumler[(t, ab, ba, value)], ustundeSn, altindaSn, together, birlikteSn, anlasmaVerildi, sonDuyulma_t` | Bellekte; diske yazılmaz (yeniden başlatmada giriş/çıkış gecikmesiyle — 60 / 15 sn — kendini toparlar) |
 | **Bildirim** (`Bildirim`) | sıra no | `t, clock, kind, severity, title, detail, people[kart], kisiler[kisiId]` | Yalnız eklenir; `kisiler` yeni alan (Soru 7) |
 | **Ayarlar** | tek satır | `esik, etkinlikAdi, altBaslik, tarih, baslangic_t, sure_dk\|null, anlasmaSn\|null` | Eşik kalıcı (brief §5) |
 | **Kimlik** (`kimlik(kart)`) | — | `atanan kişi varsa kisiId, yoksa "kart:N"` | Tüm süre/kenar/kayıt bu kimliğe yazılır (mock: `kimlik()`) |
@@ -277,7 +277,8 @@ saasBridgeBackend/
 ### 5.2 Değişmezler (test edilecek)
 1. Bir kişinin en fazla **bir** açık ataması vardır; bir kartın en fazla **bir** açık ataması vardır.
 2. `ayrildi = true` ⇒ `atananKart = null`. `atananKart ≠ null` ⇒ `ayrildi = false`.
-3. Kenar dakikaları yalnız `together` tiklerinde artar; başladığı tik de sayılır (mock testi `oturum.test.js` ile aynı).
+3. Kenar dakikaları `together` tiklerinde artar; görüşmenin başladığı tikte bekleme süresinin tamamı (eşiğin aşıldığı andan
+   beri, ≥ 60 sn) eklenir (16.3 madde 1 kararı). Görüşme kaydı (B5) bu yüzden eşiğin aşıldığı andan açılmalı (`t − ustunde_sn`).
 4. Çift başına görüşme kaydı sürelerinin toplamı ≈ `edges[].min` (±1 tik).
 5. `kart:N` kimliğine yazılmış kayıtlar, N'ye kişi atanınca o kişiye **geçer**; iade edilen kartın süreleri yeni sahibine **geçmez**.
 6. Kart değişiminde (kişi A: 14 → 22) A'nın kenarları/kayıtları bölünmez; `/state`'te 22 ile görünür.
@@ -297,6 +298,8 @@ saasBridgeBackend/
 | **Tik** | 500 ms sabit; `DT` = tik arası gerçek fark (donmaları telafi etmek için ölçülür, 0.5 varsayılır) | süre birikimi, histerezis sayaçları |
 
 - Alıcı kopukken (`receiverAge > 12`) ölçüm gelmez; sayaçlar **ilerlemez**, `seenAgo`'lar büyür, yayın sürer (İ6).
+  12 sn'den kısa paketsiz tikler normal işlenir (gerçek alıcıda bir tik boş geçebilir). Bir kartın "duyulmuyor" süresi
+  (`lost`) yalnız alıcı canlıyken sayılır: alıcı yeniden takılınca o tikte henüz gelmemiş kartlar kayıp sayılmaz (B2 incelemesi).
 - Süreç yeniden başlarsa `elapsed` diskteki `baslangic_t` üzerinden sürer (etkinlik saati sıfırlanmaz).
 - Gerçek kaynakta hızlandırma yok (gerçek zaman); yalnız benzetim kaynağı `--hizlandir` ile zamanı çarpar (B1.3).
   Birim testlerinde zaman **enjekte edilir** (`Saat` arayüzü: `simdi()`, `monotonic()`).
@@ -321,7 +324,7 @@ saasBridgeBackend/
 | `lost` bildirimi | kart 60 sn duyulmadı → `serious`; tekrar duyulunca bayrak sıfırlanır | brief §5.2 |
 | `deal` | yatırımcı+girişimci kesintisiz birlikte; süre yatırımcı yıldızına göre: ★★ 11 dk · ★★★ 8 dk · ★★★★ 11 dk · ★★★★★ 8 dk (mock); `rules.dealAfterS` zorlanabilir | brief §5.2/§6.1 — **Soru 10: tablo Muhittin'le teyit** |
 | `repeat` | anlaşma çıkmış **kişi çifti** aynı gün yeniden birlikte | brief §5.2 |
-| `idle_investor` | ★★★+ yatırımcı 6 dk kimseyle değil ve kartı duyuluyor (`seenAgo < 30`) → `warn`; bir kez | brief §5.2 |
+| `idle_investor` | ★★★+ yatırımcı 6 dk kimseyle değil ve kartı duyuluyor (`seenAgo < 30`) → `warn`; bir kez. Biriyle eşik üstünde bekliyorsa (görüşme olmadan önceki dakika) uyarı ertelenir: görüşme başlarsa o dakika görüşmeye sayılır, başlamazsa uyarı bekleme bitince düşer | brief §5.2; B2 incelemesi |
 | `no_investor` | kapalı (bayrakla açılabilir) | brief §5.2 |
 | `idleSinceS` | kişinin kesintisiz boşta kaldığı sn (`idle_investor` sayacının herkese genellenmiş hali) | `SUNUCUDAN_ISTENENLER.md` §9 |
 | İade/değişimde açık çift | o çift kapatılır, eşi serbest bırakılır; kenar dakikası korunur | `SUNUCUDAN_ISTENENLER.md` §2 |
@@ -398,7 +401,7 @@ CREATE TABLE ayar      (anahtar TEXT PRIMARY KEY, deger TEXT);               -- 
 
 ### 9.2 Yeniden başlatma
 1. Şema varsa yükle; yoksa oluştur. 2. Kişiler + açık atamalar → bellek. 3. Kenarlar, anlaşmalar, bildirimler, oturumlar.
-4. Açık oturumlar (`end_s IS NULL`): yeniden başlatma anında `end_s = elapsed` ile **kapatılır** (gerçekte sürüyorsa 5 sn sonra yeni kayıt açılır;
+4. Açık oturumlar (`end_s IS NULL`): yeniden başlatma anında `end_s = elapsed` ile **kapatılır** (gerçekte sürüyorsa giriş gecikmesi — 60 sn — sonra yeni kayıt açılır;
    rapor dürüst kalır). 5. `elapsed` = `monotonic() − (şimdi − baslangic_t)`.
 
 ### 9.3 Yedek
@@ -442,7 +445,7 @@ CREATE TABLE ayar      (anahtar TEXT PRIMARY KEY, deger TEXT);               -- 
 ## 12. Test stratejisi
 
 ### 12.1 Saf çekirdek birim testleri (`pytest`)
-- Her kural için zaman enjekte edilerek: histerezis (4,9 sn üstte → yok, 5 sn → var; 14,9 altta → sürüyor), ortanca penceresi,
+- Her kural için zaman enjekte edilerek: histerezis (59,5 sn üstte → yok, 60 sn → var; 14,9 altta → sürüyor), ortanca penceresi,
   `lost` 60 sn, `idle_investor` 6 dk, `deal` yıldız tablosu, `repeat` kişi çifti ile (kart değişse de), kenar birleşme/devretmeme,
   `kart:N` devri, `reset` kapsamı, CSV ayrıştırma (`;`/`,`/sekme, BOM, tırnak, Türkçe başlık, yinelenen ad+kurum, satır no).
 - Mock'un test dosyaları (`mock-server/oturum.test.js`, `degisim.test.js`, `iade.test.js`, `iceaktar.test.js`, `stok.test.js`,
@@ -569,11 +572,15 @@ commit'lerini alır, sonunda `docs/Bn_NOT.md` yazılır. Süreler tek kişi, tam
     Sıfırlama sahte salonu baştan başlatmaz; sinyal ölçümleri kalır.
   - B2.5 ✅ `/state`, `/events`, `/control`; Ctrl+C'de açık akışlar 1 sn içinde kesilir; kaynak ayarı açılışta denetlenir.
   - B2.6 ⏸️ Arayüz reposunda, ayrı onayla (16.3 madde 2–4 yüzünden kapsamı yeniden düşünülmeli).
-  - Kabul ✅ `pytest` 254/254; gerçek süreçle 2 Hz (alıcı kopukken de); tarayıcıda Pano / Kurulum / Sunum 390–768–1280,
+  - İnceleme ✅ Bağımsız inceleme (Opus): kritik yok; beş önemli bulgu düzeltildi — motor hata yalıtımı, alıcı geri gelince
+    sahte "kart kesildi" yağmuru, seyrek pakette süre kaybı (artık 12 sn kuralı), bekleme dakikasında yanlış "yalnız" uyarısı,
+    sınanmayan davranışlar. `config.toml` eşik aralığı eklendi.
+  - Kabul ✅ `pytest` 269/269; gerçek süreçle 2 Hz (alıcı kopukken de); tarayıcıda Pano / Kurulum / Sunum 390–768–1280,
     eşik kaydırıcısı geri okunuyor, "ALICI BAĞLI DEĞİL" çıkıyor, "bağlanılamıyor" çıkmıyor. Faz 1/3/5 maddeleri tek tek
     koşulmadı (tarayıcı kabul betikleri B8'de).
-  - Yük: 97 kişi, 170 / 320 / 850 duyulan çiftte tik 9,6 / 17,7 / 49,5 ms, `/state` 127 / 215 / 528 KB (Bölüm 10).
-- **B2.1** `cekirdek/cift.py`: eşik karşılaştırması, 5 sn giriş / 15 sn çıkış histerezisi, `together`, `birlikteSn`;
+  - Yük: 97 kişi, ~170 / ~320 / ~850 duyulan çiftte tik ~10 / ~18 / ~50–54 ms, `/state` ~130 / ~230 / ~530–610 KB
+    (Bölüm 10): üç saatlik etkinlik sonunda 50 ms bütçesi aşılıyor.
+- **B2.1** `cekirdek/cift.py`: eşik karşılaştırması, 60 sn giriş (16.3 madde 1 kararı) / 15 sn çıkış histerezisi, `together`, `birlikteSn`;
   `cekirdek/kenar.py`: kişi kimliği (`kisiId` ya da `"kart:N"`) ile dakika birikimi (başladığı tik dahil), `invMin`, `invPeers`.
 - **B2.2** `cekirdek/bildirim.py`: `deal` (yıldız tablosu, `rules.dealAfterS` zorlaması), `repeat` (kişi çifti), `idle_investor`
   (6 dk, `seenAgo<30`), `lost` (60 sn, tekrar duyulunca sıfırlanır), `no_investor` (kapalı); `clock` + `t`; `people` kart no.
@@ -582,7 +589,7 @@ commit'lerini alır, sonunda `docs/Bn_NOT.md` yazılır. Süreler tek kişi, tam
   `stats`, `event.progress`, `clock` ve `elapsed` **aynı andan**, `threshold`, `signals`, `history`, `chartSeconds`, `rules`.
   100+ cihaz hiçbir koleksiyonda yok. Kartı olmayan kişi yok.
 - **B2.4** `motor.py`: 500 ms tik; kuyruktan paketler → sinyal → çift → kenar → bildirim → `durumUret()` **bir kez** →
-  JSON **bir kez** → SSE istemcilerine aynı tampon. Alıcı kopukken (paket yok) sayaçlar donar, `seenAgo`/`receiverAge` büyür,
+  JSON **bir kez** → SSE istemcilerine aynı tampon. Alıcı kopukken (12 sn paket yok) sayaçlar donar, `seenAgo`/`receiverAge` büyür,
   **yayın sürer.** Komut kuyruğu (`reset`, `threshold`; sonra `/api/*`).
 - **B2.5** `http/durum_uclari.py`: `GET /state` (`no-store`), `GET /events` (ilk mesaj hemen, `\n\n`, `X-Accel-Buffering: no`,
   kopan istemci düşer, yavaş istemci >5 mesaj birikince kapatılır), `POST /control` (`reset` → çekirdek sıfırla; `threshold`
