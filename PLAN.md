@@ -14,10 +14,12 @@
 > Okuma sırası: **Bölüm 0 (kurallar)** → **Bölüm 8 (sözleşme)** → **Bölüm 14 (fazlar)**.
 > Diğer bölümler karar alırken ve uygularken başvurulacak ayrıntıdır.
 
-## ⏩ DEVİR NOTU (04.10.2026)
+## ⏩ DEVİR NOTU (05.10.2026)
 
 - **Durum:** B0 (iskelet) bitti ve onaylandı (04.10.2026; teslim notu `docs/B0_NOT.md`). Sunucu
-  derlenmiş arayüzü ve `/api/health`'i veriyor; veri uçları yok. B1 (giriş katmanı + sinyal) bitti ve onaylandı (05.10.2026; `docs/B1_NOT.md`); ekranda henüz değişiklik yok. Sıradaki: B2 (ayrı onay; öncesinde Bölüm 16.3 madde 1–5).
+  derlenmiş arayüzü ve `/api/health`'i veriyor; veri uçları yok. B1 (giriş katmanı + sinyal) bitti ve onaylandı (05.10.2026; `docs/B1_NOT.md`). B2 kodu yazıldı — `b2-durum-yayin` dalında,
+  inceleme ve onay bekliyor (`docs/B2_NOT.md`): Pano, Kurulum ve Sunum gerçek sunucudan (benzetim) canlı veri alıyor.
+  Sıradaki: B3 (karşılama masası; ayrı onay).
 - **Çalıştırma:** `./baslat.sh` (ya da `.venv/bin/python -m yakinlik`) → `http://localhost:8002`; testler `.venv/bin/pytest`.
 - **Kardeş repo:** https://github.com/sevvalcilali/SaasBridge — arayüz, mock sunucu (`mock-server/mock.js`, davranışın çalışan
   şartnamesi), sözleşme belgesi (`SUNUCUDAN_ISTENENLER.md`), gereksinim belgesi (`UI_TASARIM_BRIEF.md` §2, §5, §9).
@@ -556,7 +558,21 @@ commit'lerini alır, sonunda `docs/Bn_NOT.md` yazılır. Süreler tek kişi, tam
 - **Doğrulama / kabul:** `pytest` yeşil; benzetim 60 sn koşup `signals` sayısı ve `history` uzunluğu mock'la aynı büyüklükte
   (±%10); kayıt → oynatma aynı `signals` dizisini üretir (deterministik).
 
-#### B2 ⬜ `/state` · `/events` · `/control` eşdeğerliği (tahmin: 3 gün) — pano, kurulum, sunum gerçek sunucuyla
+#### B2 🟡 `/state` · `/events` · `/control` eşdeğerliği (tahmin: 3 gün) — kod bitti (05.10.2026, dal `b2-durum-yayin`), onay bekliyor
+- **Yapıldı** (ayrıntı ve gerekçeler: `docs/B2_NOT.md`):
+  - B2.1 ✅ Karar: 10 sn ortancası eşiğin üstünde **kesintisiz 60 sn** → birlikte; bekleme görüşmeye sayılır; 15 sn çıkış
+    (16.3 madde 1, Şevval 05.10.2026). Duyulmayan çift eşik altında sayılır.
+  - B2.2 ✅ `alan.py` (plan listesinde yoktu: tikin saf işlenişi motor'dan ayrı) + `bildirim.py`; `kisi.py` en küçük haliyle
+    (benzetim kadrosundan). Aynı kişi çiftine anlaşma bir kez. `idleSinceS` herkes için.
+  - B2.3 ✅ `/state` mock'la alan alan aynı; tek ek `people[].idleSinceS`. Atanmamış kart ilk görüşmesinden sonra (R7).
+  - B2.4 ✅ Komutlar ayrı kuyruk yerine olay döngüsünde eşzamanlı (tik işleme `await`siz). Kaynak biterse yayın sürer.
+    Sıfırlama sahte salonu baştan başlatmaz; sinyal ölçümleri kalır.
+  - B2.5 ✅ `/state`, `/events`, `/control`; Ctrl+C'de açık akışlar 1 sn içinde kesilir; kaynak ayarı açılışta denetlenir.
+  - B2.6 ⏸️ Arayüz reposunda, ayrı onayla (16.3 madde 2–4 yüzünden kapsamı yeniden düşünülmeli).
+  - Kabul ✅ `pytest` 254/254; gerçek süreçle 2 Hz (alıcı kopukken de); tarayıcıda Pano / Kurulum / Sunum 390–768–1280,
+    eşik kaydırıcısı geri okunuyor, "ALICI BAĞLI DEĞİL" çıkıyor, "bağlanılamıyor" çıkmıyor. Faz 1/3/5 maddeleri tek tek
+    koşulmadı (tarayıcı kabul betikleri B8'de).
+  - Yük: 97 kişi, 170 / 320 / 850 duyulan çiftte tik 9,6 / 17,7 / 49,5 ms, `/state` 127 / 215 / 528 KB (Bölüm 10).
 - **B2.1** `cekirdek/cift.py`: eşik karşılaştırması, 5 sn giriş / 15 sn çıkış histerezisi, `together`, `birlikteSn`;
   `cekirdek/kenar.py`: kişi kimliği (`kisiId` ya da `"kart:N"`) ile dakika birikimi (başladığı tik dahil), `invMin`, `invPeers`.
 - **B2.2** `cekirdek/bildirim.py`: `deal` (yıldız tablosu, `rules.dealAfterS` zorlaması), `repeat` (kişi çifti), `idle_investor`
@@ -676,8 +692,12 @@ Hiçbiri B0–B2'yi engellemez; varsayılanlar bu belgededir. Soru 1–6'nın ta
       bu dosyaya yönlendirilmesi SaasBridge reposunda ayrı onayla.
 - [ ] B0 incelemesinden ertelenen küçük işler (B2 öncesi: açılış satırı ve uçların kayıt sırası; B7: Windows provası,
       `baslat.bat`, `wheelhouse/`): `docs/B0_NOT.md` → "Ertelenen küçük bulgular".
-- [ ] B1 incelemesinden B2'ye kalanlar (kayıt bitince yayının sürmesi, etkinlik saati ↔ kaynak saati, `--tohum`, tik kadansı)
-      ve ertelenen küçük bulgular: `docs/B1_NOT.md` → "B2 için notlar", "Ertelenen küçük bulgular".
+- [ ] B1 incelemesinden kalanlar: kayıt bitince yayın sürüyor ✅ (B2); etkinlik saati = kaynak saati, yeniden başlatmada
+      sürmesi B6; `--tohum` B2.6 ile; benzetim tik kadansı (bekle-sonra-çalış kayması) açık. Ayrıntı: `docs/B1_NOT.md`.
+- [ ] Arayüz reposu (SaasBridge), ayrı onay: "5 sn" yazan iki metin → 1 dakika (Rapor dipnotu, Kurulum çift tablosu), mock'un
+      `GIRIS_SN` → 60, B2.6 (mock testlerini gerçek sunucuya koşturma). `docs/B2_NOT.md` → "Arayüz reposunda yapılması gerekenler".
+- [ ] Grafik verisi (`history`) yükü: 3 saatte ~850 çift → tik ~50 ms, `/state` ~528 KB. Öneri: yalnız Kurulum açıkken
+      göndermek (Bölüm 10 b; arayüz değişikliği) — karar bekliyor.
 
 ### 16.3 Plan ↔ kod çelişkileri (analiz 03.10.2026; karar bekliyor)
 Bu plan ile `SaasBridge` kodu (mock ve testleri) karşılaştırılınca çıkanlar. Hiçbiri henüz karara bağlanmadı; planın ilgili
