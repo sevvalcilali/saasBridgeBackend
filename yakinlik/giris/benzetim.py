@@ -120,7 +120,9 @@ class Benzetim:
         t = self.sim_sn
         if not self._atanmamis_geldi and t >= ATANMAMIS_SN:
             self._atanmamis_geldi = True
-            self._kartlar.append(_Kart(ATANMAMIS_KART, None))
+            # Masa kartı daha önce birine verdiyse ya da kart masadaysa ikinci kopyası eklenmez (mock ile aynı).
+            if not self._salondaki(ATANMAMIS_KART) and ATANMAMIS_KART not in self.masadaki:
+                self._kartlar.append(_Kart(ATANMAMIS_KART, None))
         if self._kayip is None and t >= KAYIP_ARALIK[0] and self._kartlar:
             self._kayip = self._kartlar[len(self._kartlar) // 3]
             for es in list(self._kayip.esler):
@@ -134,6 +136,28 @@ class Benzetim:
         # Masadaki yedekler açıktır (alıcı duyar) ama kimseyle ölçülmez; mock'ta da çiftleri yoktur.
         paketler += [Paket(no, (), _pil(no, t), t) for no in self.masadaki]
         return Tik(t, tuple(paketler))
+
+    def kart_ver(self, kart: str, rol: str) -> None:
+        """Masa kartı birine verdi: kart salona girer (zaten salondaysa yalnız rolü güncellenir), masadan çıkar."""
+        self.masadaki = tuple(no for no in self.masadaki if no != kart)
+        salondaki = self._salondaki(kart)
+        if salondaki is None:
+            self._kartlar.append(_Kart(kart, rol))
+        else:
+            salondaki.rol = rol
+
+    def kart_al(self, kart: str, masaya: bool) -> None:
+        """Kart salondan çıkar: iadede masaya döner ve açık durur; değişimde bırakılan kart kapanır."""
+        salondaki = self._salondaki(kart)
+        if salondaki is not None:
+            for es in list(salondaki.esler):
+                self._ayir(kart, es)
+            self._kartlar.remove(salondaki)
+        if masaya and kart not in self.masadaki:
+            self.masadaki = (*self.masadaki, kart)
+
+    def _salondaki(self, kart: str) -> "_Kart | None":
+        return next((salondaki for salondaki in self._kartlar if salondaki.no == kart), None)
 
     def _kadro_uret(self, istenen: int) -> tuple[SahteKisi, ...]:
         adet = min(istenen, EN_COK_KISI)
