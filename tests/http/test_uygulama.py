@@ -12,8 +12,10 @@ def tur(yanit):
     return yanit.headers["content-type"].split(";")[0]
 
 
-async def test_saglik_ucu_surumu_ve_kaynagi_bildirir(istemci_ac, dist):
-    async with istemci_ac(uygulama_olustur(Ayar(dist=dist, kaynak="kayit"))) as istemci:
+async def test_saglik_ucu_surumu_ve_kaynagi_bildirir(istemci_ac, dist, tmp_path):
+    iz = tmp_path / "iz.jsonl"
+    iz.write_text('{"t": 0.5, "paketler": []}\n', encoding="utf-8")
+    async with istemci_ac(uygulama_olustur(Ayar(dist=dist, kaynak="kayit", iz=iz))) as istemci:
         yanit = await istemci.get("/api/health")
 
     assert yanit.status_code == 200

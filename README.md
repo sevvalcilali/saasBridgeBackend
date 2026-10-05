@@ -22,6 +22,7 @@ Gereken: Python 3.11+. Arayüz reposu yan klasörde (`../SaasBridge`) ve derlenm
 ./baslat.sh                  # sanal ortam hazır değilse kurar, sunucuyu başlatır → http://localhost:8002
                              # (Windows: baslat.bat — henüz Windows'ta denenmedi)
 ./baslat.sh --port 8010      # argümanlar sunucuya geçer: --port --kaynak --dist --veri --seri
+./baslat.sh --hizlandir 10   # benzetim: --kisi 40 --hizlandir 10 --kopma 0 --anlasma-sn 30; kayıt: --kaydet iz.jsonl / --kaynak kayit --iz iz.jsonl
 ```
 
 Elle kurulum ve testler:
