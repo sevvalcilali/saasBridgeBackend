@@ -20,7 +20,8 @@
   derlenmiş arayüzü ve `/api/health`'i veriyor; veri uçları yok. B1 (giriş katmanı + sinyal) bitti ve onaylandı (05.10.2026; `docs/B1_NOT.md`). B2 (canlı durum) bitti ve onaylandı
   (05.10.2026; `docs/B2_NOT.md`): Pano, Kurulum ve Sunum gerçek sunucudan (benzetim) canlı veri alıyor.
   B3 (karşılama masası) bitti ve onaylandı (05.10.2026; `docs/B3_NOT.md`).
-  B4 (`/api/cards`) bitti ve onaylandı (`docs/B4_NOT.md`). Sıradaki: B5 (görüşme kayıtları, rapor).
+  B4 (`/api/cards`) bitti ve onaylandı (`docs/B4_NOT.md`). B5 (görüşme kayıtları, atama geçmişi, rapor) bitti, onay
+  bekliyor (`docs/B5_NOT.md`). Sıradaki: B6 (kalıcılık + sıfırlama; B5+B6 bağımsız incelemesi).
 - **Çalıştırma:** `./baslat.sh` (ya da `.venv/bin/python -m yakinlik`) → `http://localhost:8002`; testler `.venv/bin/pytest`.
 - **Kardeş repo:** https://github.com/sevvalcilali/SaasBridge — arayüz, mock sunucu (`mock-server/mock.js`, davranışın çalışan
   şartnamesi), sözleşme belgesi (`SUNUCUDAN_ISTENENLER.md`), gereksinim belgesi (`UI_TASARIM_BRIEF.md` §2, §5, §9).
@@ -639,7 +640,10 @@ commit'lerini alır, sonunda `docs/Bn_NOT.md` yazılır. Süreler tek kişi, tam
 - **Kabul:** `stok.test.js`, `cards.test.js` senaryoları; Kurulum kart sağlığı tablosu ve masadaki "boştaki kartlar" şeridi
   gerçek sunucuyla; Faz 3 kabul 16/16.
 
-#### B5 ⬜ Görüşme kayıtları + atama geçmişi + bildirim kimlikleri (tahmin: 2 gün) — kişi paneli ve rapor
+#### B5 ✅ Görüşme kayıtları + atama geçmişi + bildirim kimlikleri (tahmin: 2 gün) — kişi paneli ve rapor
+- **Yapıldı** (`docs/B5_NOT.md`): `/api/sessions`, `/api/assignments`, `alerts[].kisiler`. Kayıt eşiğin aşıldığı ana
+  geri tarihli; çift başına kayıt toplamı = kenar dakikası. `pytest` 375/375. Tarayıcı 10/10 (rapor, iki CSV, kişi
+  paneli ve B4'ten kalan masa / Kurulum maddeleri).
 - `cekirdek/oturum.py` (`together` olunca açılır, bitince kapanır; iade/değişimde kapanır; `kart:N` → kişiye devir),
   `GET /api/sessions` (etkinlik sn, 1 ondalık, `end:null`), `GET /api/assignments`, `alerts[].kisiler` (Soru 7 —
   geriye uyumlu ek alan).

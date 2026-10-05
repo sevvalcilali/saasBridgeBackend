@@ -162,8 +162,8 @@ def test_bildirimler_en_eski_basta_alan_alan():
     d = durum(Salon().gecir(5.0).gecir(60.0, sessiz={"4"}))
 
     (bildirim,) = d["alerts"]
-    assert sorted(bildirim) == ["clock", "detail", "kind", "people", "severity", "t", "title"]
-    assert bildirim["people"] == ["4"]
+    assert sorted(bildirim) == ["clock", "detail", "kind", "kisiler", "people", "severity", "t", "title"]
+    assert (bildirim["people"], bildirim["kisiler"]) == (["4"], ["k3"])  # kart değişse de doğru kişi (Soru 7)
     assert re.fullmatch(r"\d{2}:\d{2}", bildirim["clock"])
 
 
