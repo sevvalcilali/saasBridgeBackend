@@ -1,4 +1,9 @@
 """Sinyal işleme (PLAN B1.5): çift ölçümü, 10 sn ortancası, grafik serisi, son duyulma. Zaman elle verilir."""
+import random
+import statistics
+import time
+from itertools import combinations
+
 import pytest
 
 from yakinlik.cekirdek.sinyal import SinyalDeposu
@@ -44,6 +49,28 @@ def test_tek_yonlu_olcumde_eksik_yon_bos_deger_gelen_yondur():
     (sinyal,) = depo.sinyaller(simdi=1.0)
 
     assert (sinyal.ab, sinyal.ba, sinyal.value) == (-50.0, None, -50.0)
+
+
+def test_bastaki_sifirli_numara_ayni_karttir():
+    depo = SinyalDeposu()
+    depo.ekle([paket("007", 1.0, ("12", -50.0)), paket("12", 1.0, ("7", -60.0))])
+
+    (sinyal,) = depo.sinyaller(simdi=1.0)
+
+    assert (sinyal.a, sinyal.b, sinyal.ab, sinyal.ba) == ("7", "12", -50.0, -60.0)
+
+
+def test_gec_gelen_eski_olcum_son_degeri_bozmaz_ve_cifti_sildirmez():
+    depo = SinyalDeposu()
+    tek_yonlu(depo, [(10.0, -50.0)])
+    tek_yonlu(depo, [(2.0, -90.0)])  # geç gelen, daha eski ölçüm
+
+    (sinyal,) = depo.sinyaller(simdi=12.0)
+    depo.unut(simdi=40.0)  # en yeni ölçüm tam 30 sn önce: çift henüz unutulmamalı
+    tek_yonlu(depo, [(45.0, -60.0)])
+
+    assert (sinyal.son, sinyal.value, sinyal.n) == (-50.0, -50.0, 2)
+    assert depo.gecmis(simdi=45.0)["7-12"] == [(42, -90.0), (34, -50.0), (0, -60.0)]
 
 
 def test_kartin_kendini_duymasi_olcum_sayilmaz():
@@ -184,6 +211,45 @@ def test_korunan_cift_duyulmasa_da_unutulmaz():
     tek_yonlu(depo, [(70.0, -50.0)])
 
     assert depo.gecmis(simdi=70.0)["7-12"] == [(70, -80.0), (0, -50.0)]
+
+
+def test_kalabalik_salonda_tik_basina_sinyal_isleme_butceye_sigar():
+    # Yük: 97 kart, 850 duyulan çift, çift başına son 95 sn'lik ölçüm (benzetimde ~3 saat sonraki durum).
+    # PLAN Bölüm 10: bütün tik < 50 ms; motor, bildirimler ve JSON da bu bütçeden pay alacak.
+    # Zaman ölçen test: sınırlar bu makinede ölçülenin (toplam ~26 ms, pencere + unutma ~4 ms) yaklaşık
+    # 1,7 katı, eski her-şeyi-baştan-hesaplayan sürümün (66 ms, 19 ms) altında.
+    kartlar = [str(n) for n in range(2, 99)]
+    ciftler = random.Random(1).sample(list(combinations(kartlar, 2)), 850)
+    rng = random.Random(2)
+
+    def tik_paketleri(t):
+        duyulan = {kart: [] for kart in kartlar}
+        for x, y in ciftler:
+            duyulan[x].append((y, rng.gauss(-70, 8)))
+            duyulan[y].append((x, rng.gauss(-70, 8)))
+        return [Paket(kart, tuple(liste), 80, t) for kart, liste in duyulan.items()]
+
+    depo, t = SinyalDeposu(), 0.0
+    for _ in range(190):
+        t += 0.5
+        depo.ekle(tik_paketleri(t))
+        depo.unut(t)
+    toplam, pencere_ve_unutma = [], []
+    for _ in range(7):
+        t += 0.5
+        paketler = tik_paketleri(t)
+        bas = time.perf_counter()
+        depo.ekle(paketler)
+        depo.sinyaller(t)
+        depo.unut(t)
+        orta = time.perf_counter()
+        depo.gecmis(t)
+        son = time.perf_counter()
+        pencere_ve_unutma.append((orta - bas) * 1000)
+        toplam.append((son - bas) * 1000)
+
+    assert statistics.median(pencere_ve_unutma) < 10
+    assert statistics.median(toplam) < 45
 
 
 def test_eski_olcumler_bellekte_birikmez():
