@@ -9,7 +9,12 @@ from dataclasses import dataclass
 from typing import Protocol
 
 METIN_SINIRI = 200  # ad, kurum, not (PLAN Bölüm 11): pano ve rapor taşmasın
-ROL_SIRASI = ("investor", "founder", "guest")  # /state.people bu sırayla (yatırımcı → girişimci → misafir)
+ROL_SIRASI = ("investor", "founder", "guest")
+ASAMALAR = ("fikir", "mvp", "gelir", "buyume")  # girişimin aşaması (yalnız girişimcide)
+# Kişiye özel rapor için profil (Şevval kararı 2026-10): girişimcide sektör, aşama, tanıtım, web, e-posta;
+# yatırımcıda ilgi alanı sektörleri (virgüllü) ve e-posta. İletişim yalnız `paylasim` (açık izin) varsa paylaşılır.
+PROFIL_METINLERI = ("sektor", "tanitim", "web", "eposta")
+_EVET = {"evet", "e", "yes", "y", "true", "1", "var", "izinli", "x"}  # /state.people bu sırayla (yatırımcı → girişimci → misafir)
 # Brief §10 koyu paleti (mock ile aynı); açık tema uyarlaması arayüzde. Renk kişi doğarken atanır, değişmez.
 PALET = ("#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#9085e9", "#e66767")
 
@@ -25,6 +30,12 @@ class Kisi:
     atanan_kart: str | None = None
     notu: str = ""
     ayrildi: bool = False  # kartını iade etti mi ("kart bekliyor" ile "ayrıldı" ayrımı)
+    sektor: str = ""  # girişimcide sektörü; yatırımcıda ilgi alanları (virgüllü)
+    asama: str = ""  # ASAMALAR'dan biri ya da boş (yalnız girişimci)
+    tanitim: str = ""  # tek cümle
+    web: str = ""
+    eposta: str = ""
+    paylasim: bool = False  # iletişim bilgisi başka katılımcıların raporunda görünebilir mi (açık izin)
 
     @property
     def gorunen_ad(self) -> str:
@@ -74,6 +85,19 @@ def _yildiz(rol: str, deger: object) -> int:
     return max(0, min(5, _tam_sayi(deger))) if rol == "investor" else 0
 
 
+def _asama(rol: str, deger: object) -> str:
+    return deger if rol == "founder" and deger in ASAMALAR else ""
+
+
+def _evet(deger: object) -> bool:
+    """Paylaşım izni: yalnız açıkça "evet" (ya da true / 1) denirse; boş, "hayır", bilinmeyen → hayır."""
+    if isinstance(deger, bool):
+        return deger
+    if isinstance(deger, int):
+        return deger == 1
+    return isinstance(deger, str) and deger.strip().replace("E", "e").lower() in _EVET
+
+
 class KisiDefteri:
     def __init__(self) -> None:
         self._kisiler: dict[str, Kisi] = {}  # kisiId → kişi (eklenme sırasıyla)
@@ -119,20 +143,24 @@ class KisiDefteri:
         """Kartın şu anki kimliği: atanmış kişinin kisiId'si, yoksa "kart:N"."""
         return self._kartlar.get(kart, f"kart:{kart}")
 
-    def ekle(self, ad: object, rol: object = "guest", kurum: object = "", yildiz: object = 0, notu: object = "") -> Kisi:
-        """Kartsız yeni kişi. Boş adı reddetmek çağıranın işi; buraya gelirse "İsimsiz" olur (mock ile aynı)."""
+    def ekle(self, ad: object, rol: object = "guest", kurum: object = "", yildiz: object = 0, notu: object = "",
+             asama: object = "", paylasim: object = False, **profil: object) -> Kisi:
+        """Kartsız yeni kişi. Boş adı reddetmek çağıranın işi; buraya gelirse "İsimsiz" olur (mock ile aynı).
+        `profil`: sektor, tanitim, web, eposta (metin olmayan yok sayılır, 200 karakter)."""
         self._sayac += 1
         rol = rol if rol in ROL_SIRASI else "guest"
         kisi = Kisi(
             f"k{self._sayac}", _kirp(_metin(ad).strip() or "İsimsiz"), rol, _kirp(_metin(kurum)), _yildiz(rol, yildiz),
-            PALET[(self._sayac - 1) % len(PALET)], notu=_kirp(_metin(notu)),
+            PALET[(self._sayac - 1) % len(PALET)], notu=_kirp(_metin(notu)), asama=_asama(rol, asama),
+            paylasim=_evet(paylasim),
+            **{alan: _kirp(_metin(profil.get(alan)).strip()) for alan in PROFIL_METINLERI},
         )
         self._kisiler[kisi.kisi_id] = kisi
         return kisi
 
     def guncelle(self, kisi_id: str, alanlar: Mapping[str, object]) -> Kisi | None:
-        """Yalnız verilen alanlar değişir (ad, rol, kurum, yildiz, not). Kimlik, renk ve kart değişmez; geçersiz rol ve
-        boş ad yok sayılır. Kişi yoksa None."""
+        """Yalnız verilen alanlar değişir (ad, rol, kurum, yildiz, not ve profil). Kimlik, renk ve kart değişmez; geçersiz
+        rol ve boş ad yok sayılır; rol girişimci değilse aşama, yatırımcı değilse yıldız düşer. Kişi yoksa None."""
         kisi = self._kisiler.get(kisi_id)
         if kisi is None:
             return None
@@ -145,7 +173,13 @@ class KisiDefteri:
             kisi.kurum = _kirp(alanlar["kurum"])
         if isinstance(alanlar.get("not"), str):
             kisi.notu = _kirp(alanlar["not"])
+        for alan in PROFIL_METINLERI:
+            if isinstance(alanlar.get(alan), str):
+                setattr(kisi, alan, _kirp(alanlar[alan].strip()))
+        if "paylasim" in alanlar:
+            kisi.paylasim = _evet(alanlar["paylasim"])
         kisi.yildiz = _yildiz(kisi.rol, alanlar["yildiz"] if "yildiz" in alanlar else kisi.yildiz)
+        kisi.asama = _asama(kisi.rol, alanlar["asama"] if "asama" in alanlar else kisi.asama)
         return kisi
 
     def sil(self, kisi_id: str) -> None:

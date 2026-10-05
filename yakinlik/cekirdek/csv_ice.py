@@ -1,6 +1,6 @@
 """CSV ile toplu kişi yükleme (SUNUCUDAN_ISTENENLER §1, brief §6.2). Saf.
 
-Sütunlar: ad, soyad, rol, kurum, yıldız. İlk satır başlıksa sütunlar ada göre eşlenir, değilse bu sırayla okunur.
+Sütunlar: ad, soyad, rol, kurum, yıldız; profil (rapor 2. adım): sektör, aşama, tanıtım, web, e-posta, izin. İlk satır başlıksa sütunlar ada göre eşlenir, değilse bu sırayla okunur.
 Ayraç `;` (Türkçe Excel), `,` ya da sekme — ilk satırdan anlaşılır. Tırnaklı alan ve `""` kaçışı desteklenir; baştaki
 UTF-8 BOM atılır. Başlık ve rol büyük-küçük harf, Türkçe harf (ı/i, ş/s …) farkı gözetmeden tanınır. Atlanan satırlar
 dosyadaki satır numarasıyla bildirilir; boş satırlar sessizce geçilir. Dosya kodlamasını arayüz çözer (hep UTF-8 gelir).
@@ -9,9 +9,16 @@ from dataclasses import dataclass
 
 from .kisi import KisiDefteri
 
-_SIRA = ("ad", "soyad", "rol", "kurum", "yildiz")  # başlık yoksa sütun sırası
+_SIRA = ("ad", "soyad", "rol", "kurum", "yildiz", "sektor", "asama", "tanitim", "web", "eposta", "paylasim")  # başlıksız
 _SUTUNLAR = {"ad": "ad", "isim": "ad", "soyad": "soyad", "soyadi": "soyad", "rol": "rol",
-             "kurum": "kurum", "sirket": "kurum", "yildiz": "yildiz"}
+             "kurum": "kurum", "sirket": "kurum", "yildiz": "yildiz",
+             "sektor": "sektor", "sektorler": "sektor", "ilgi alani": "sektor", "ilgi alanlari": "sektor",
+             "asama": "asama", "tanitim": "tanitim", "aciklama": "tanitim",
+             "web": "web", "web sitesi": "web", "website": "web", "site": "web",
+             "e-posta": "eposta", "eposta": "eposta", "email": "eposta", "e-mail": "eposta", "mail": "eposta",
+             "izin": "paylasim", "paylasim": "paylasim", "paylasim izni": "paylasim", "iletisim izni": "paylasim"}
+_ASAMALAR = {"fikir": "fikir", "idea": "fikir", "mvp": "mvp", "gelir": "gelir", "revenue": "gelir",
+             "buyume": "buyume", "growth": "buyume"}
 _ROLLER = {"yatirimci": "investor", "investor": "investor", "girisimci": "founder", "founder": "founder",
            "misafir": "guest", "guest": "guest"}
 _TURKCE_HARFSIZ = str.maketrans("çğıöşü", "cgiosu")
@@ -111,6 +118,9 @@ def iceri_aktar(defter: KisiDefteri, metin: str) -> AktarmaSonucu:
             atlanan.append(Atlanan(satir_no, f"{ad} zaten kayıtlı"))
             continue
         kayitli.add(anahtar)
-        defter.ekle(ad=ad, rol=rol, kurum=kurum, yildiz=degerler.get("yildiz", ""))
+        defter.ekle(ad=ad, rol=rol, kurum=kurum, yildiz=degerler.get("yildiz", ""),
+                    asama=_ASAMALAR.get(_anahtar(degerler.get("asama", "")), ""),
+                    paylasim=_anahtar(degerler.get("paylasim", "")) in ("evet", "e", "yes", "true", "1", "var", "x"),
+                    **{alan: degerler.get(alan, "") for alan in ("sektor", "tanitim", "web", "eposta")})
         eklenen += 1
     return AktarmaSonucu(eklenen, tuple(atlanan))

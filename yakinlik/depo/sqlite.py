@@ -24,15 +24,27 @@ from ..cekirdek.oturum import Oturum
 
 gunluk = logging.getLogger(__name__)
 
-SURUM = 1  # şema sürümü (PRAGMA user_version)
+SURUM = 2  # şema sürümü (PRAGMA user_version)
 DOSYA = "yakinlik.sqlite"
 YEDEK_KLASORU = "yedek"
 ACILIS_YEDEGI_SAKLA = 10  # açılış yedeklerinin en yenileri tutulur; sıfırlama ve yeni etkinlik yedekleri hiç silinmez
 _SEMA = (Path(__file__).parent / "sema.sql").read_text(encoding="utf-8")
+# Sürüm N → N+1 adımları. Eski dosya açılışta önce yedeklenir, adımlar tek işlemde çalışır (bkz. _yukselt).
+_YUKSELTMELER = {
+    1: """
+ALTER TABLE kisi ADD COLUMN sektor TEXT NOT NULL DEFAULT '';
+ALTER TABLE kisi ADD COLUMN asama TEXT NOT NULL DEFAULT '';
+ALTER TABLE kisi ADD COLUMN tanitim TEXT NOT NULL DEFAULT '';
+ALTER TABLE kisi ADD COLUMN web TEXT NOT NULL DEFAULT '';
+ALTER TABLE kisi ADD COLUMN eposta TEXT NOT NULL DEFAULT '';
+ALTER TABLE kisi ADD COLUMN paylasim INTEGER NOT NULL DEFAULT 0;
+""",
+}
 
 # tablo → (birincil anahtar sütunları, bütün sütunlar). Anahtar sütunları başta: satırın anahtarı satir[:len(anahtar)].
 _TABLOLAR = {
-    "kisi": (("sira",), ("sira", "kisi_id", "ad", "rol", "kurum", "yildiz", "renk", "notu", "kart", "ayrildi", "silindi")),
+    "kisi": (("sira",), ("sira", "kisi_id", "ad", "rol", "kurum", "yildiz", "renk", "notu", "kart", "ayrildi", "silindi",
+                         "sektor", "asama", "tanitim", "web", "eposta", "paylasim")),
     "atama": (("id",), ("id", "t", "kisi_id", "kart", "islem")),
     "oturum": (("id",), ("id", "a", "b", "start_s", "end_s")),
     "kenar": (("a", "b"), ("a", "b", "dakika")),
@@ -45,9 +57,9 @@ _TABLOLAR = {
 Tablolar = dict[str, dict[tuple, tuple]]  # tablo → {anahtar: satır}
 
 
-def _baglan(yol: Path) -> sqlite3.Connection:
-    """Dosyayı açar ve kilitler (ikinci bir sunucu aynı dosyaya yazamasın); yeni dosyada şemayı kurar, eskisinde sürümü
-    denetler. Açılamıyorsa ValueError: sunucu açılmadan, anlaşılır iletiyle durur."""
+def _baglan(yol: Path, simdi: float) -> sqlite3.Connection:
+    """Dosyayı açar ve kilitler (ikinci bir sunucu aynı dosyaya yazamasın); yeni dosyada şemayı kurar, eski sürümü
+    yedekleyip yükseltir, yenisini reddeder. Açılamıyorsa ValueError: sunucu açılmadan, anlaşılır iletiyle durur."""
     try:
         db = sqlite3.connect(yol, isolation_level=None, check_same_thread=False, timeout=0.2)
     except sqlite3.Error as hata:
@@ -67,6 +79,8 @@ def _baglan(yol: Path) -> sqlite3.Connection:
         db.execute("PRAGMA synchronous = NORMAL")  # süreç ölse de kayıp yok; yalnız elektrik kesilirse son tikler
         if surum == 0:
             db.executescript(f"BEGIN IMMEDIATE;\n{_SEMA}\nPRAGMA user_version = {SURUM};\nCOMMIT;")
+        elif surum < SURUM:
+            _yukselt(db, yol, surum, simdi)
     except sqlite3.Error as hata:
         db.close()
         if hata.sqlite_errorname in ("SQLITE_BUSY", "SQLITE_LOCKED"):
@@ -88,18 +102,35 @@ def _yedek_yolu(klasor: Path, neden: str, simdi: float) -> Path:
     return yol
 
 
-def _yedegi_dogrula(yol: Path) -> None:
+def _yukselt(db: sqlite3.Connection, yol: Path, surum: int, simdi: float) -> None:
+    """Eski sürüm dosya: önce doğrulanmış yedek (`yedek/yakinlik-surum-N-…`), sonra bütün adımlar tek işlemde. Bir adım
+    bile başarısızsa işlem geri alınır, dosya eski haliyle kalır (ALTER TABLE ve user_version işleme dahildir)."""
+    try:
+        yedek = _kopyala(db, _yedek_yolu(yol.parent / YEDEK_KLASORU, f"surum-{surum}", simdi), surum=surum)
+    except (OSError, sqlite3.Error) as hata:
+        raise ValueError(f"veri dosyası yükseltilemedi: önce alınması gereken yedek alınamadı ({hata}); dosyaya dokunulmadı") from hata
+    adimlar = "\n".join(_YUKSELTMELER[s] for s in range(surum, SURUM))
+    try:
+        db.executescript(f"BEGIN IMMEDIATE;\n{adimlar}\nPRAGMA user_version = {SURUM};\nCOMMIT;")
+    except sqlite3.Error as hata:
+        if db.in_transaction:
+            db.execute("ROLLBACK")
+        raise ValueError(f"veri dosyası sürüm {surum} → {SURUM} yükseltilemedi ({hata}); dosyaya dokunulmadı, yedek: {yedek}") from hata
+    gunluk.warning("veri dosyası sürüm %s → %s yükseltildi; önceki hal: %s", surum, SURUM, yedek)
+
+
+def _yedegi_dogrula(yol: Path, surum: int = SURUM) -> None:
     db = sqlite3.connect(yol)
     try:
         sonuc = db.execute("PRAGMA quick_check").fetchone()[0]
-        surum = db.execute("PRAGMA user_version").fetchone()[0]
+        bulunan = db.execute("PRAGMA user_version").fetchone()[0]
     finally:
         db.close()
-    if sonuc != "ok" or surum != SURUM:
-        raise ValueError(f"yedek doğrulanamadı: {yol} ({sonuc}, sürüm {surum})")
+    if sonuc != "ok" or bulunan != surum:
+        raise ValueError(f"yedek doğrulanamadı: {yol} ({sonuc}, sürüm {bulunan})")
 
 
-def _kopyala(kaynak: sqlite3.Connection, hedef: Path) -> Path:
+def _kopyala(kaynak: sqlite3.Connection, hedef: Path, surum: int = SURUM) -> Path:
     """Tutarlı kopya (yazılmamış WAL sayfaları dahil) → tek başına taşınabilir dosya; doğrulanmadan dönmez."""
     try:
         db = sqlite3.connect(hedef)
@@ -108,7 +139,7 @@ def _kopyala(kaynak: sqlite3.Connection, hedef: Path) -> Path:
             db.execute("PRAGMA journal_mode = DELETE")  # yedek tek dosya olsun (-wal'siz)
         finally:
             db.close()
-        _yedegi_dogrula(hedef)
+        _yedegi_dogrula(hedef, surum)
     except BaseException:
         hedef.unlink(missing_ok=True)  # yarım ya da bozuk yedek kalmasın
         raise
@@ -117,7 +148,7 @@ def _kopyala(kaynak: sqlite3.Connection, hedef: Path) -> Path:
 
 def _arsivle(yol: Path, simdi: float) -> Path:
     """Yeni etkinlik: eski veri doğrulanmış bir yedeğe kopyalanır, ancak ondan sonra eski dosya silinir."""
-    db = _baglan(yol)  # kilit: dosya başka bir sunucudaysa dokunulmaz
+    db = _baglan(yol, simdi)  # kilit: dosya başka bir sunucudaysa dokunulmaz (eski sürümse önce yükseltilir)
     try:
         arsiv = _kopyala(db, _yedek_yolu(yol.parent / YEDEK_KLASORU, "yeni-etkinlik", simdi))
     finally:
@@ -132,10 +163,11 @@ def _satirlar(alan: Alan, simdi: float, onceki_kisiler: Mapping[tuple, tuple]) -
     kisi: dict[tuple, tuple] = {}
     for k in alan.defter.kisiler():
         sira = int(k.kisi_id.removeprefix("k"))
-        kisi[(sira,)] = (sira, k.kisi_id, k.ad, k.rol, k.kurum, k.yildiz, k.renk, k.notu, k.atanan_kart, int(k.ayrildi), 0)
+        kisi[(sira,)] = (sira, k.kisi_id, k.ad, k.rol, k.kurum, k.yildiz, k.renk, k.notu, k.atanan_kart, int(k.ayrildi), 0,
+                         k.sektor, k.asama, k.tanitim, k.web, k.eposta, int(k.paylasim))
     for anahtar, satir in onceki_kisiler.items():
-        if anahtar not in kisi:  # listeden çıkarılan kişi: satırı ve kimliği kalır, silindi işaretlenir
-            kisi[anahtar] = (*satir[:8], None, satir[9], 1)
+        if anahtar not in kisi:  # listeden çıkarılan kişi: satırı (profili de) kalır, kartı düşer, silindi işaretlenir
+            kisi[anahtar] = (*satir[:8], None, satir[9], 1, *satir[11:])
     sure, karma = alan.kenarlar.sure, alan.kenarlar.karma
     ayar = {
         "esik": alan.esik, "gecen_sn": alan.gecen_sn, "son_duvar": simdi, "biten": alan.biten,
@@ -170,11 +202,13 @@ class Kalici:
         t = self.tablolar
         ayar = {anahtar: json.loads(deger) for (anahtar,), (_, deger) in t["ayar"].items()}
         kisiler, sayac = [], ayar["kisi_sayac"]
-        for sira, kisi_id, ad, rol, kurum, yildiz, renk, notu, kart, ayrildi, silindi in _sirali(t["kisi"]):
+        for (sira, kisi_id, ad, rol, kurum, yildiz, renk, notu, kart, ayrildi, silindi,
+             sektor, asama, tanitim, web, eposta, paylasim) in _sirali(t["kisi"]):
             sayac = max(sayac, sira)  # kimlik, silinen kişininki de, yeniden kullanılmaz
             if not silindi:
                 kisiler.append(Kisi(kisi_id, ad, rol, kurum, yildiz, renk, atanan_kart=kart, notu=notu,
-                                    ayrildi=bool(ayrildi)))
+                                    ayrildi=bool(ayrildi), sektor=sektor, asama=asama, tanitim=tanitim, web=web,
+                                    eposta=eposta, paylasim=bool(paylasim)))
         alan = Alan(KisiDefteri.geri_yukle(kisiler, sayac), esik=ayar["esik"], anlasma_sn=anlasma_sn,
                     baslangic=baslangic, gecen=self.devam_sn)
         son = ayar["gecen_sn"]
@@ -219,7 +253,7 @@ class Depo:
             except (OSError, sqlite3.Error) as hata:
                 raise ValueError(f"yeni etkinlik: eski veri yedek klasörüne taşınamadı ({hata})") from hata
         vardi = yol.exists()
-        depo = cls(_baglan(yol), yol)
+        depo = cls(_baglan(yol, simdi), yol)
         if vardi:
             # Açılış yedeği kolaylıktır: alınamadı diye (disk dolu, klasör yazılamaz) sunucu açılmamazlık etmez.
             try:

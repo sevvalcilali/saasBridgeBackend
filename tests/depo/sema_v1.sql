@@ -1,6 +1,6 @@
+-- DONDURULMUŞ: şema sürüm 1 (yükseltme testleri için; değiştirmeyin).
 -- Yakınlık sunucusunun kalıcı verisi (PLAN Bölüm 9): bellekteki alan modelinin aynası. Okuma bellekten yapılır; bu
--- dosya açılışta yükleme ve tik sonunda yazma içindir. Sürüm PRAGMA user_version'da (depo/sqlite.py SURUM = 2).
--- Eski sürüm dosya açılışta yedeklenip yükseltilir (depo/sqlite.py _YUKSELTMELER); yeni sütunlar hep sonda.
+-- dosya açılışta yükleme ve tik sonunda yazma içindir. Sürüm PRAGMA user_version'da (depo/sqlite.py SURUM).
 -- Kısıt yalnız birincil anahtar ve NOT NULL: bellekteki bir tutarsızlık yazımı kilitlememeli (yazılamayan veri kaybolur).
 -- kimlik / a / b: kişi kimliği ("k12"), kişisiz kart "kart:N", iade edilmiş kişisiz kart "arsiv:kart:N:sıra".
 
@@ -15,14 +15,7 @@ CREATE TABLE kisi (
     notu     TEXT NOT NULL,
     kart     TEXT,                 -- şu an elindeki kart (açık atama); yoksa NULL
     ayrildi  INTEGER NOT NULL,     -- kartını iade etti
-    silindi  INTEGER NOT NULL,     -- listeden çıkarıldı (DELETE /api/people); satır ve kimlik korunur
-    -- sürüm 2: kişiye özel rapor profili
-    sektor   TEXT NOT NULL DEFAULT '',  -- girişimcide sektörü; yatırımcıda ilgi alanları (virgüllü)
-    asama    TEXT NOT NULL DEFAULT '',  -- fikir | mvp | gelir | buyume (yalnız girişimci)
-    tanitim  TEXT NOT NULL DEFAULT '',
-    web      TEXT NOT NULL DEFAULT '',
-    eposta   TEXT NOT NULL DEFAULT '',
-    paylasim INTEGER NOT NULL DEFAULT 0  -- iletişim bilgisi başka katılımcıların raporunda görünebilir (açık izin)
+    silindi  INTEGER NOT NULL      -- listeden çıkarıldı (DELETE /api/people); satır ve kimlik korunur
 );
 
 CREATE TABLE atama (               -- zaman damgalı atama geçmişi (GET /api/assignments)

@@ -94,3 +94,36 @@ def test_uzun_metinler_200_karakterde_kirpilir(defter):
     defter.guncelle(kisi.kisi_id, {"not": "M" * 1000})
 
     assert (len(kisi.ad), len(kisi.kurum), kisi.notu) == (200, 200, "M" * 200)
+
+
+# --- Profil (kişiye özel rapor 2. adım, Şevval kararı 2026-10): sektör, aşama, tanıtım, web, e-posta, paylaşım izni ---
+
+def test_profil_alanlari_eklenir_asama_yalniz_girisimcide_ve_listeden(defter):
+    g = defter.ekle(ad="Can", rol="founder", sektor=" Sağlık ", asama="mvp", tanitim="Evde tahlil", web="ornek.com",
+                    eposta="can@ornek.com", paylasim=True)
+    y = defter.ekle(ad="Ece", rol="investor", sektor="Sağlık, Enerji", asama="mvp", eposta="ece@fon.com")
+    uydurma = defter.ekle(ad="Su", rol="founder", asama="dev")
+
+    assert (g.sektor, g.asama, g.tanitim, g.web, g.eposta, g.paylasim) == (
+        "Sağlık", "mvp", "Evde tahlil", "ornek.com", "can@ornek.com", True)
+    assert (y.sektor, y.asama, y.paylasim) == ("Sağlık, Enerji", "", False)  # izin varsayılanı hayır
+    assert uydurma.asama == ""
+
+
+@pytest.mark.parametrize(("deger", "beklenen"), [
+    (True, True), (False, False), ("evet", True), ("Evet", True), ("EVET", True), ("yes", True), ("1", True),
+    ("hayır", False), ("", False), (None, False), (1, True), (0, False), ("belki", False),
+])
+def test_paylasim_izni_acikca_evet_denmedikce_hayir(defter, deger, beklenen):
+    assert defter.ekle(ad="X", paylasim=deger).paylasim is beklenen
+
+
+def test_profil_duzenlenir_rol_degisince_asama_duser_metinler_kirpilir(defter):
+    kisi = defter.ekle(ad="Can", rol="founder", asama="gelir")
+    defter.guncelle(kisi.kisi_id, {"tanitim": "T" * 300, "paylasim": True, "eposta": "a@b.c"})
+    tanitim, paylasim, eposta = kisi.tanitim, kisi.paylasim, kisi.eposta
+    defter.guncelle(kisi.kisi_id, {"rol": "investor"})
+
+    assert (len(tanitim), paylasim, eposta) == (200, True, "a@b.c")
+    assert kisi.asama == ""
+    assert kisi.paylasim is True  # verilmeyen alan değişmez

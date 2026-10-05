@@ -1,6 +1,8 @@
 """Kalıcılık (PLAN B6, Bölüm 9): alanın kalıcı kısmı SQLite'ta; süreç kapanıp açılınca kaldığı yerden sürer."""
+import json
 import sqlite3
 import time
+from pathlib import Path
 from dataclasses import asdict
 
 import pytest
@@ -24,7 +26,8 @@ def dolu_salon():
     """Biten ve süren görüşmeler, anlaşma bildirimleri, kişisiz kartın kişiye geçen süresi, kart değişimi, silinen kişi."""
     salon = Salon(anlasma_sn=60).gecir(130.0, {("2", "3"): YAKIN, ("4", "14"): YAKIN})
     salon.gecir(30.0, {("4", "14"): YAKIN})  # Ayşe–Mehmet biter
-    deniz = salon.alan.defter.ekle(ad="Deniz", rol="founder", kurum="Fon")
+    deniz = salon.alan.defter.ekle(ad="Deniz", rol="founder", kurum="Fon", sektor="Sağlık", asama="mvp",
+                                   tanitim="Evde tahlil", web="fon.com", eposta="deniz@fon.com", paylasim=True)
     ata(salon.alan, deniz.kisi_id, "14", salon.duvar)  # kart:14 → k5: süreler, kayıt ve anlaşma Deniz'e geçer
     ata(salon.alan, "k2", "40", salon.duvar)  # Mehmet kart değiştirir
     salon.alan.defter.sil(salon.alan.defter.ekle(ad="Silinen").kisi_id)  # k6
@@ -291,7 +294,7 @@ def test_yeni_etkinlikte_yedek_dogrulanamazsa_eski_veri_silinmez(klasor, monkeyp
     depo.yaz(salon.alan, salon.duvar)
     depo.kapat()
 
-    def bozuk_yedek(yol):
+    def bozuk_yedek(yol, *_):
         raise ValueError(f"yedek doğrulanamadı: {yol}")
 
     monkeypatch.setattr(depo_modulu, "_yedegi_dogrula", bozuk_yedek)
@@ -343,3 +346,69 @@ def test_bu_sunucuya_ait_olmayan_veritabani_reddedilir_ve_degistirilmez(klasor):
         Depo.ac(klasor, DUVAR)
 
     assert (klasor / DOSYA).read_bytes() == once
+
+
+# --- Şema sürüm 2 (profil alanları): eski dosya yedeklenip yükseltilir; yükseltme yarıda kalırsa dosyaya dokunulmaz ---
+
+def surum_1_dosyasi(klasor):
+    """Bugünkü sunucudan önceki (sürüm 1) bir veri dosyası: bir kişi, bir görüşme, ayarlar."""
+    klasor.mkdir()
+    db = sqlite3.connect(klasor / DOSYA)
+    db.executescript((Path(__file__).parent / "sema_v1.sql").read_text(encoding="utf-8") + "\nPRAGMA user_version = 1;")
+    db.execute("INSERT INTO kisi VALUES (1, 'k1', 'Ayşe', 'investor', 'Fon', 3, '#111', 'VIP', '2', 0, 0)")
+    db.execute("INSERT INTO oturum VALUES (1, 'k1', 'kart:14', 10.0, 70.0)")
+    ayar = {"esik": -70, "gecen_sn": 90.0, "son_duvar": DUVAR, "biten": 1, "emekli_sayac": 0, "kisi_sayac": 1}
+    db.executemany("INSERT INTO ayar VALUES (?, ?)", [(k, json.dumps(v)) for k, v in ayar.items()])
+    db.commit()
+    db.close()
+
+
+def sutunlar(yol, tablo):
+    db = sqlite3.connect(yol)
+    try:
+        return [satir[1] for satir in db.execute(f"PRAGMA table_info({tablo})")], db.execute("PRAGMA user_version").fetchone()[0]
+    finally:
+        db.close()
+
+
+def test_surum_1_dosyasi_once_yedeklenir_sonra_yukseltilir_veri_korunur(klasor):
+    surum_1_dosyasi(klasor)
+
+    depo = Depo.ac(klasor, DUVAR)
+    alan = depo.yukle(DUVAR).alan()
+    depo.kapat()
+
+    (kisi,) = alan.defter.kisiler()
+    assert (kisi.ad, kisi.notu, kisi.atanan_kart, kisi.yildiz) == ("Ayşe", "VIP", "2", 3)
+    assert (kisi.sektor, kisi.asama, kisi.eposta, kisi.paylasim) == ("", "", "", False)
+    assert [(o["a"], o["start"], o["end"]) for o in oturumlar_sozluk(alan)] == [("k1", 10.0, 70.0)]
+    kolonlar, surum = sutunlar(klasor / DOSYA, "kisi")
+    assert surum == depo_modulu.SURUM == 2 and "paylasim" in kolonlar
+    (yedek,) = (klasor / "yedek").glob("yakinlik-surum-1-*.sqlite")
+    assert sutunlar(yedek, "kisi")[1] == 1 and satir_sayisi(yedek, "kisi") == 1  # yükseltmeden önceki hal
+
+
+def test_yukseltme_yarida_kalirsa_dosya_eski_haliyle_kalir(klasor, monkeypatch):
+    # Kritik: şema değişikliği tek işlemde; bir adım bile başarısızsa hiçbir sütun eklenmemiş olmalı.
+    surum_1_dosyasi(klasor)
+    bozuk = "ALTER TABLE kisi ADD COLUMN sektor TEXT NOT NULL DEFAULT '';\nALTER TABLE olmayan ADD COLUMN x TEXT;"
+    monkeypatch.setattr(depo_modulu, "_YUKSELTMELER", {1: bozuk})
+
+    with pytest.raises(ValueError, match="yükseltilemedi"):
+        Depo.ac(klasor, DUVAR)
+
+    kolonlar, surum = sutunlar(klasor / DOSYA, "kisi")
+    assert surum == 1 and "sektor" not in kolonlar
+    assert satir_sayisi(klasor / DOSYA, "oturum") == 1
+
+
+def test_silinen_kisinin_profili_de_satirinda_kalir(klasor):
+    salon = Salon()
+    depo = Depo.ac(klasor, salon.duvar)
+    kisi = salon.alan.defter.ekle(ad="Silinen", rol="founder", eposta="s@ornek.com", paylasim=True)
+    depo.yaz(salon.alan, salon.duvar)
+    salon.alan.defter.sil(kisi.kisi_id)
+    depo.yaz(salon.alan, salon.duvar)
+    depo.kapat()
+
+    assert satir_sayisi(klasor / DOSYA, "kisi WHERE silindi = 1 AND eposta = 's@ornek.com' AND paylasim = 1") == 1
