@@ -17,13 +17,15 @@
 ## ⏩ DEVİR NOTU (04.10.2026)
 
 - **Durum:** B0 (iskelet) bitti ve onaylandı (04.10.2026; teslim notu `docs/B0_NOT.md`). Sunucu
-  derlenmiş arayüzü ve `/api/health`'i veriyor; veri uçları yok. Sıradaki: B1 (ayrı onay; B1.3'ten önce Bölüm 16.3 madde 6 karara bağlanmalı).
+  derlenmiş arayüzü ve `/api/health`'i veriyor; veri uçları yok. B1 (giriş katmanı + sinyal) bitti ve onaylandı (05.10.2026; `docs/B1_NOT.md`); ekranda henüz değişiklik yok. Sıradaki: B2 (ayrı onay; öncesinde Bölüm 16.3 madde 1–5).
 - **Çalıştırma:** `./baslat.sh` (ya da `.venv/bin/python -m yakinlik`) → `http://localhost:8002`; testler `.venv/bin/pytest`.
 - **Kardeş repo:** https://github.com/sevvalcilali/SaasBridge — arayüz, mock sunucu (`mock-server/mock.js`, davranışın çalışan
   şartnamesi), sözleşme belgesi (`SUNUCUDAN_ISTENENLER.md`), gereksinim belgesi (`UI_TASARIM_BRIEF.md` §2, §5, §9).
 - **Yerel düzen (öneri):** iki repo yan yana: `…/SaasBridge` ve `…/saasBridgeBackend`. Sunucu `../SaasBridge/dist`'i servis
   eder; geliştirmede SaasBridge'de `npx vite`, burada `python -m yakinlik --kaynak benzetim`.
-- **Donanım yok.** Benzetim kaynağıyla ilerlenir; seri paket biçimi gelince B8.
+- **Donanım var, burada değil.** Kartlar ve alıcı çalışıyor ve ekipçe test edildi (05.10.2026, Şevval). Geliştirme
+  ortamında yok: benzetim yalnız geliştirme süresince yerini tutuyor. Yazılım bitince Şevval sistemi verecek, gerçek
+  donanıma bağlama B8'de yapılacak.
 
 ## Tek sayfada özet
 
@@ -115,7 +117,7 @@
 ### 2.1 Bugün elde olan
 | Parça | Nerede | Durum |
 |---|---|---|
-| Kart yazılımı (C3) + alıcı (ESP32-S3) | Muhittin | Çalışıyor; paket biçimi **belgelenmemiş** (B8 girdisi) |
+| Kart yazılımı (C3) + alıcı (ESP32-S3) | Muhittin | Çalışıyor, ekipçe test edildi; paket biçimi **belgelenmemiş** (B8 girdisi) |
 | `server.py` | Muhittin | Seri okuma, yumuşatma, eşik −72, 5 sn giriş / 15 sn çıkış, 12 sn paket yok = kopuk |
 | `pano/pano.py` | Muhittin | Kişi/rol ekleme, bildirim kuralları, `/`, `/state`, `/events`, `/control`; 2 Hz SSE; `localhost:8002` |
 | Arayüz | `SaasBridge` `src/` | Faz 0–5 bitti, `dist/` statik servis edilir |
@@ -146,7 +148,7 @@
 |---|---|---|
 | Dil / çatı | **Python 3.11 + FastAPI + uvicorn + pyserial**, SQLite (stdlib) | Gerekçe Bölüm 3.2–3.3; Muhittin'in Python kodu taşınabilir |
 | Konum | **Ayrı repo** (`saasBridgeBackend`) | Arayüz reposuyla karışmasın; sözleşme belgesi arayüz reposunda kalır |
-| Donanım | **Yok → benzetimle başlanır** | Seri katman arayüz olarak bırakılır, B8'de tamamlanır |
+| Donanım | **Var ama geliştirme ortamında yok → benzetimle ilerlenir** | Kartlar ve alıcı çalışıyor ve test edildi (05.10.2026, Şevval); yazılım bitince sistem verilecek, seri katman B8'de bağlanır |
 | Sözleşme | `SaasBridge/SUNUCUDAN_ISTENENLER.md` + brief §5.1 **değişmez** | Değişiklik gerekiyorsa üç yerde birlikte: sözleşme belgesi, `http/semalar.py`, `mock.js` |
 | Dal düzeni | **Her faz kendi dalında** (`b0-iskelet` gibi), faz sonunda PR; Şevval onaylayınca `main`'e birleşir (04.10.2026) | `main` hep onaylanmış hali gösterir; arayüz reposuna yazma her seferinde ayrı onayla |
 
@@ -225,6 +227,7 @@ saasBridgeBackend/
 │  │  ├─ kaynak.py             # PaketKaynagi arayüzü
 │  │  ├─ benzetim.py           # donanımsız dinamik (mock tik() eşdeğeri)
 │  │  ├─ kayit.py              # iz dosyası oynatıcı / kaydedici
+│  │  ├─ olustur.py            # ayarlardan kaynak kurar (kaynak_olustur)
 │  │  └─ seri.py               # pyserial thread → Queue (B8)
 │  ├─ cekirdek/                # SAF — I/O yok, zaman parametre
 │  │  ├─ sinyal.py             # pencere, ortanca, grafik kovaları
@@ -413,6 +416,11 @@ CREATE TABLE ayar      (anahtar TEXT PRIMARY KEY, deger TEXT);               -- 
   Hedef: tik işleme < 50 ms, JSON < 20 ms. Ölçüm B7'de; aşarsa seçenekler sırayla: (a) `history` yalnız son 90 sn ve 2 sn kovalı (zaten),
   (b) `history`'yi yalnız bir Kurulum istemcisi bağlıyken göndermek (`/events?teknik=1` isteğe bağlı parametre — arayüz değişikliği
   gerektirir, ayrı karar), (c) ölçüm penceresini `collections.deque` ile O(1) tutmak.
+  **Ölçüm (B1 incelemesi, 05.10.2026):** benzetimde duyulan çift sayısı etkinlik boyunca büyür (ayrılan çiftler birbirini zayıf
+  duymaya devam eder): 97 kartta 1 saatte ~320, 3 saatte ~850. Bu yükte sinyal çekirdeği tik başına ~28 ms; bunun ~23 ms'si
+  grafik serisi (her tikte ~38 bin kova; kovalar "şimdi"ye göre olduğu için önbelleğe alınamaz). Motor, bildirimler ve JSON
+  eklenince 50 ms aşılabilir → (b) seçeneği B7'ye değil **B2 tasarımına** girdi. Gerçek donanımda salondaki bütün kartlar
+  birbirini duyarsa çift sayısı daha da büyük olabilir (97 kartta en çok 4656) — Soru 11 (seri biçim) ile birlikte bakılmalı.
 - **Seri hacmi:** 97 kart × saniyede birkaç paket × duyduğu komşular → saniyede birkaç bin ölçüm; ayrıştırma thread'de, çekirdeğe toplu teslim (tik başına liste).
 
 ---
@@ -476,7 +484,7 @@ CREATE TABLE ayar      (anahtar TEXT PRIMARY KEY, deger TEXT);               -- 
 
 Durum işaretleri: ⬜ onay bekliyor · 🟡 devam ediyor · ✅ bitti ve onaylandı
 
-### 🟡 Faz B — Gerçek sunucu (Python) (planlandı 03.10.2026; B0 bitti 04.10.2026, sonraki fazlar ayrı onayla)
+### 🟡 Faz B — Gerçek sunucu (Python) (planlandı 03.10.2026; B0 bitti 04.10.2026, B1 bitti 05.10.2026, sonraki fazlar ayrı onayla)
 
 **Amaç:** Arayüzün mock'tan aldığı her şeyi gerçek bir sunucudan, aynı sözleşmeyle vermek. Gerekçe, mimari, veri modeli ve
 kurallar Bölüm 1–13'te; **burası uygulama sırası ve kabul ölçütleridir.** Her B fazı ayrı onayla başlar (Bölüm 0.1), kendi
@@ -516,10 +524,26 @@ commit'lerini alır, sonunda `docs/Bn_NOT.md` yazılır. Süreler tek kişi, tam
 - **Doğrulama / kabul:** `pytest` yeşil; SaasBridge'de `npm run build` sonrası `python -m yakinlik` → tarayıcıda `http://localhost:8002/`
   arayüz açılıyor ("Veri bekleniyor…" — henüz `/state` yok, çökmüyor); `.js` dosyaları doğru MIME; `/api/demo` 404.
 
-#### B1 ⬜ Giriş katmanı + sinyal işleme (tahmin: 2 gün)
+#### B1 ✅ Giriş katmanı + sinyal işleme (tahmin: 2 gün) — bitti ve onaylandı (05.10.2026)
+- **Yapıldı** (ayrıntı ve gerekçeler: `docs/B1_NOT.md`):
+  - B1.1 ✅ `Paket` plandaki dört alanla; kişi kartı kuralı arayüzdeki `kisiKartiMi` ile aynı.
+  - B1.2 ✅ **Plandan sapma:** kaynak `list[Paket]` yerine `Tik` (tik anı + paketler) akışı üretir; işleme katmanı zamanı
+    tikten okur. Boş tikte zaman kaybolmaz; hızlandırma ve kayıttan oynatma canlı koşuyla birebir aynı zamanı taşır.
+  - B1.3 ✅ Kadro (25 örnek kişi) benzetimde üretilir ve dışarı açıktır (16.3 madde 6 kararı). Susan kartı başka kartlar
+    da duymaz. Yeni bayraklar `--kisi --hizlandir --kopma`; `--tohum` eklenmedi.
+  - B1.4 ✅ `--kaydet`, `--kaynak kayit --iz`; `giris/olustur.py` ayarlardan kaynağı kurar. **Bayraklar çalışan sunucuda
+    B2'ye kadar etkisiz** (kaynağı motor çalıştıracak).
+  - B1.5 ✅ `SinyalDeposu`: değerler yuvarlanmadan tutulur (yuvarlama B2'de yayın katmanında); hem son ölçümü hem
+    ortancayı verir (16.3 madde 1 kararı B2'de).
+  - İnceleme ✅ Dal bağımsız incelemeden geçti (Opus): bir kritik bulgu (`--kaydet` var olan dosyayı, `--iz` ile aynıysa
+    oynatılacak izi siliyordu) ve sekiz önemli bulgu bu dalda düzeltildi. En büyüğü hız: 97 kart / 850 çift yükünde sinyal
+    çekirdeği tik başına 66 → 28 ms. Ertelenen küçük bulgular ve B2 notları `docs/B1_NOT.md`'de.
+  - Kabul ✅ `pytest` 168/168; 60 sn'de sinyal sayısı 9,07 (mock 8,80; +%3,1), grafik uzunluğu 18,19 (mock 18,41; −%1,2);
+    kayıt → oynatma 400 tikte birebir aynı sinyal dizisi.
 - **B1.1** `giris/paket.py`: `Paket{kart: str, duyulanlar: [(kart, rssi)], pil: int|None, t: float}` dataclass; 100+ kart
   işaretlenir ama **atılmaz** (`/api/cards` için). Ayrıştırıcı **yok** (biçim bilinmiyor) — `SeriKaynak` B8'de.
-- **B1.2** `giris/kaynak.py`: `PaketKaynagi` arayüzü (`async def paketler() -> AsyncIterator[list[Paket]]`, tik başına liste).
+- **B1.2** `giris/kaynak.py`: `PaketKaynagi` arayüzü (`def tikler() -> AsyncGenerator[Tik, None]`; `Tik` = tik anı + o tikin
+  paketleri — ilk yazımda `list[Paket]` idi, 04.10.2026'da değişti, gerekçe yukarıda).
 - **B1.3** `giris/benzetim.py`: mock `tik()` dinamiğinin Python'u — aynı tohumlu RNG değil, **aynı senaryo zamanlaması**:
   Kart 14 → 45. sn, kayıp kart → 180–300. sn, alıcı kopması → 120. sn ve her 360 sn (`--kopma=0` ile kapalı), yedek kartlar
   (6 adet, masada), `--kisi` (≤97), `--hizlandir`. Ad/kurum listeleri mock'tan. Böylece arayüzün Faz 2–5 kabul betikleri
@@ -652,10 +676,12 @@ Hiçbiri B0–B2'yi engellemez; varsayılanlar bu belgededir. Soru 1–6'nın ta
       bu dosyaya yönlendirilmesi SaasBridge reposunda ayrı onayla.
 - [ ] B0 incelemesinden ertelenen küçük işler (B2 öncesi: açılış satırı ve uçların kayıt sırası; B7: Windows provası,
       `baslat.bat`, `wheelhouse/`): `docs/B0_NOT.md` → "Ertelenen küçük bulgular".
+- [ ] B1 incelemesinden B2'ye kalanlar (kayıt bitince yayının sürmesi, etkinlik saati ↔ kaynak saati, `--tohum`, tik kadansı)
+      ve ertelenen küçük bulgular: `docs/B1_NOT.md` → "B2 için notlar", "Ertelenen küçük bulgular".
 
 ### 16.3 Plan ↔ kod çelişkileri (analiz 03.10.2026; karar bekliyor)
 Bu plan ile `SaasBridge` kodu (mock ve testleri) karşılaştırılınca çıkanlar. Hiçbiri henüz karara bağlanmadı; planın ilgili
-bölümleri değiştirilmedi. B0 etkilenmez; madde 6 B1.3'ten, diğerleri B2'den önce karara bağlanmalı.
+bölümleri değiştirilmedi. Madde 6 karara bağlandı (04.10.2026); diğerleri B2'den önce karara bağlanmalı.
 
 1. **"Birlikte" kararı.** Bölüm 7 son 10 sn ortancası diyor; mock kararı **son ölçümle** veriyor (`mock.js:485`), ortanca yalnız
    `signals[].value` ve `above` için kullanılıyor. Hangisi esas?
@@ -670,11 +696,17 @@ bölümleri değiştirilmedi. B0 etkilenmez; madde 6 B1.3'ten, diğerleri B2'den
 6. **Benzetim ↔ kayıt defteri.** Mock'ta ikisi iç içe (25 kişi kartlı başlar, iade edilen kart sahneden çıkar, eşleşme role
    bakar); burada benzetim yalnız paket kaynağı. Başlangıç kadrosunu kim kurar, kaynak atamayı nasıl öğrenir, kalıcılıkla
    nasıl birlikte yaşar?
+   **Karar (04.10.2026, Şevval):** mock'taki düzen. Sunucu benzetim modunda açılınca 25 örnek kişi kartlarıyla hazır gelir
+   (kadro benzetimde üretilir, sunucu kayıt defterini onunla kurar); masa kart verip iade ettikçe sahte kartlar salona
+   girer / çıkar (sunucu benzetime haber verir); gerçek donanımda bunların hiçbiri devreye girmez. Kalıcılıkla birlikte
+   yaşama ayrıntısı B6'da.
 7. **Durum kodu sapmaları (Bölüm 8.2 ↔ mock).** Geçersiz `rol` (plan 400; mock `guest` yapıp 200), atanmamış ama bilinen kartın
    iadesi (plan 404; mock 200), `DELETE` (plan `silindi` işareti; mock kaydı siler).
 8. **Yedek kart varsayılanı (R7).** Mock'ta yedekler benzetime hiç girmiyor, Kart 14 ise 45. sn'de zamanlayıcıyla ekleniyor;
    "görüşmeye girince eklenir" mock davranışı değil. Gerçekte masada yan yana duran açık yedekler birbirini güçlü duyup
    "birlikte" sayılabilir → Soru 1–2'nin cevabı B4'ten önce gerekli.
+   **Not (B1, 05.10.2026):** bu durum benzetimde üretilemiyor: masadaki yedekler paket yollar ama kimseyle ölçülmez (mock ile
+   aynı). B4 kabulü için ya gerçek donanım ya da yedeklerin birbirini duyduğu yeni bir benzetim ayarı gerekecek.
 
 ---
 

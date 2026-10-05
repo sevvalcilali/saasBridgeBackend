@@ -140,6 +140,34 @@ def test_etkinlik_tablosundaki_bilinmeyen_anahtar_reddedilir(tmp_path):
         yukle(tmp_path, '[etkinlik]\nisim = "Deneme"\n')
 
 
+def test_benzetim_varsayilanlari_mock_ile_aynidir(tmp_path):
+    ayar = yukle(tmp_path)
+
+    assert (ayar.kisi, ayar.hizlandir, ayar.kopma) == (25, 1, True)  # mock: --kisi=25 --hizlandir=1 --kopma=1
+    assert (ayar.kaydet, ayar.iz) == (None, None)
+
+
+def test_benzetim_ve_kayit_bayraklari_okunur(tmp_path):
+    ayar = yukle(tmp_path, argumanlar=[
+        "--kisi", "40", "--hizlandir", "10", "--kopma=0", "--kaydet", "iz.jsonl", "--iz", "eski.jsonl",
+    ])
+
+    assert (ayar.kisi, ayar.hizlandir, ayar.kopma) == (40, 10, False)
+    assert (ayar.kaydet, ayar.iz) == (Path("iz.jsonl"), Path("eski.jsonl"))
+
+
+@pytest.mark.parametrize(
+    "argumanlar",
+    [
+        ["--kisi", "0"], ["--kisi", "-3"], ["--hizlandir", "0"], ["--hizlandir", "-2"], ["--hizlandir", "inf"],
+        ["--hizlandir", "nan"], ["--kopma", "2"],
+    ],
+)
+def test_gecersiz_benzetim_bayragi_reddedilir(tmp_path, argumanlar):
+    with pytest.raises(SystemExit):
+        yukle(tmp_path, argumanlar=argumanlar)
+
+
 def test_depodaki_config_toml_yuklenebilir():
     # Depodaki config.toml elle düzenlenir; bozuksa sunucu açılmaz.
     yol = Path(__file__).parent.parent / "config.toml"
