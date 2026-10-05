@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from .alan import Alan
 from .bildirim import GORUNUR_SN, karsi_rol
 from .kisi import ROL_SIRASI
+from .oturum import rapor_kimligi
 from .sinyal import GRAFIK_SN
 
 
@@ -25,6 +26,20 @@ def js_yuvarla(deger: float, basamak: int = 0) -> float:
     """JavaScript `Math.round(x·10ⁿ)/10ⁿ`: buçuk +∞ yönüne (Python round() buçuğu çifte yuvarlar)."""
     carpan = 10**basamak
     return math.floor(deger * carpan + 0.5) / carpan
+
+
+def oturumlar_sozluk(alan: Alan) -> list[dict]:
+    """GET /api/sessions: [{a, b, start, end}] — kişi kimliği, etkinlik saniyesi (tek ondalık), sürüyorsa end null."""
+    return [
+        {"a": rapor_kimligi(o.a), "b": rapor_kimligi(o.b), "start": js_yuvarla(o.start, 1),
+         "end": None if o.end is None else js_yuvarla(o.end, 1)}
+        for o in alan.oturumlar
+    ]
+
+
+def atamalar_sozluk(alan: Alan) -> list[dict]:
+    """GET /api/assignments: zaman damgalı atama geçmişi (t duvar saati, epoch sn)."""
+    return [{"t": k.t, "kisiId": k.kisi_id, "kart": k.kart, "islem": k.islem} for k in alan.atama_gecmisi]
 
 
 BOS_KART_UNUTMA_SN = 300  # bu kadar duyulmayan boş kart listeden düşer (kapandı ya da salondan çıktı)

@@ -22,10 +22,11 @@ class Bildirim:
     title: str
     detail: str
     people: tuple[str, ...]  # kart numaraları (/state sözleşmesi)
+    kisiler: tuple[str, ...]  # aynı sırayla kişi kimlikleri: kart sonradan değişse de doğru kişi (Soru 7)
 
     def sozluk(self) -> dict:
         return {"t": self.t, "clock": self.clock, "kind": self.kind, "severity": self.severity,
-                "title": self.title, "detail": self.detail, "people": list(self.people)}
+                "title": self.title, "detail": self.detail, "people": list(self.people), "kisiler": list(self.kisiler)}
 
 
 def karsi_rol(a: Kisi, b: Kisi) -> bool:
@@ -46,8 +47,10 @@ def _yildiz(kisi: Kisi) -> str:
     return "★" * kisi.yildiz
 
 
-def _bildirim(duvar: float, kind: str, severity: str, title: str, detail: str, *kartlar: str) -> Bildirim:
-    return Bildirim(duvar, time.strftime("%H:%M", time.localtime(duvar)), kind, severity, title, detail, kartlar)
+def _bildirim(duvar: float, kind: str, severity: str, title: str, detail: str, *kisiler: tuple[Kisi, str]) -> Bildirim:
+    """`kisiler`: (kişi, kart) çiftleri."""
+    return Bildirim(duvar, time.strftime("%H:%M", time.localtime(duvar)), kind, severity, title, detail,
+                    tuple(kart for _, kart in kisiler), tuple(kisi.kisi_id for kisi, _ in kisiler))
 
 
 def anlasma(duvar: float, a: Kisi, b: Kisi, kart_a: str, kart_b: str, birlikte_sn: float) -> Bildirim:
@@ -55,19 +58,19 @@ def anlasma(duvar: float, a: Kisi, b: Kisi, kart_a: str, kart_b: str, birlikte_s
     dakika = math.floor(birlikte_sn / 60 + 0.5)  # JavaScript Math.round
     return _bildirim(duvar, "deal", "deal", "Potansiyel anlaşma",
                      f"{yatirimci.ad} ({_yildiz(yatirimci)}) ile {diger.gorunen_ad} {dakika} dakikadır birlikte.",
-                     kart_a, kart_b)
+                     (a, kart_a), (b, kart_b))
 
 
 def tekrar(duvar: float, a: Kisi, b: Kisi, kart_a: str, kart_b: str) -> Bildirim:
     return _bildirim(duvar, "repeat", "deal", "Yeniden bir arada",
-                     f"{a.gorunen_ad} ile {b.gorunen_ad} anlaşma sonrası tekrar bir araya geldi.", kart_a, kart_b)
+                     f"{a.gorunen_ad} ile {b.gorunen_ad} anlaşma sonrası tekrar bir araya geldi.", (a, kart_a), (b, kart_b))
 
 
 def kayip(duvar: float, kisi: Kisi, kart: str) -> Bildirim:
     return _bildirim(duvar, "lost", "serious", "Kart sinyali kesildi",
-                     f"{kisi.gorunen_ad} (kart {kart}) 1 dk'dır duyulmuyor.", kart)
+                     f"{kisi.gorunen_ad} (kart {kart}) 1 dk'dır duyulmuyor.", (kisi, kart))
 
 
 def yalniz(duvar: float, kisi: Kisi, kart: str) -> Bildirim:
     return _bildirim(duvar, "idle_investor", "warn", "Önemli yatırımcı yalnız",
-                     f"{kisi.ad} ({_yildiz(kisi)}) 6 dk'dır kimseyle görüşmüyor.", kart)
+                     f"{kisi.ad} ({_yildiz(kisi)}) 6 dk'dır kimseyle görüşmüyor.", (kisi, kart))

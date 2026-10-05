@@ -242,3 +242,25 @@ async def test_bes_dakikadir_duyulmayan_bos_kart_listeden_duser_atanmis_kart_kal
 
     assert "14" not in kartlar  # kapanmış / kaybolmuş boş kart kart sağlığını kirletmesin
     assert kartlar["3"]["seenAgo"] == 300.5  # atanmış kart kalır: kayıp kart uyarısı bunu kullanır
+
+
+# --- görüşme kayıtları, atama geçmişi (B5) ---
+
+async def test_gorusme_kayitlari_alan_alan(istemci, motor):
+    for i in range(140):
+        motor.isle(tik_uret(1.0 + 0.5 * i, {("2", "3"): YAKIN}))
+
+    kayitlar = (await istemci.get("/api/sessions")).json()
+
+    assert kayitlar == [{"a": "k1", "b": "k2", "start": 0.5, "end": None}]
+
+
+async def test_atama_gecmisi_zaman_damgali(istemci):
+    kisi = (await gonder(istemci, "POST", "/api/people", {"ad": "Yeni", "rol": "guest"})).json()
+    await gonder(istemci, "POST", "/api/assign", {"kisiId": kisi["kisiId"], "kart": "40"})
+    await gonder(istemci, "POST", "/api/unassign", {"kart": "40", "ayrildi": False})
+
+    gecmis = (await istemci.get("/api/assignments")).json()
+
+    assert [(g["kisiId"], g["kart"], g["islem"]) for g in gecmis] == [("k5", "40", "ata"), ("k5", "40", "geri_al")]
+    assert all(sorted(g) == ["islem", "kart", "kisiId", "t"] and g["t"] == 1e9 for g in gecmis)

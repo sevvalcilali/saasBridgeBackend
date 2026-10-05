@@ -9,6 +9,7 @@ from .bildirim import Bildirim
 from .cift import CiftDurumu, Gecis, ilerlet
 from .kenar import Kenarlar, kimlik_cifti
 from .kisi import Kisi, KisiDefteri, kisisiz_kart
+from .oturum import Oturum
 from .sinyal import SinyalDeposu
 
 ALICI_KOPUK_SN = 12  # brief §2: alıcıdan bu kadar süre hiç paket gelmezse bağlantı kopmuş sayılır
@@ -42,6 +43,8 @@ class Alan:
         self._kayip_bildirildi: set[str] = set()  # kart
         self._sessiz: dict[str, float] = {}  # kart → alıcı canlıyken kesintisiz duyulmadığı saniye
         self.atama_gecmisi: list = []  # AtamaKaydi (cekirdek/atama.py); sıfırlamada silinir
+        self.oturumlar: list = []  # Oturum (cekirdek/oturum.py): görüşme kayıtları; sıfırlamada silinir
+        self._acik_oturum: dict = {}  # çift anahtarı → açık Oturum
         self._emekli_sayac = 0  # iade edilen kişisiz kartların eski kimlikleri için sıra no
 
     @property
@@ -81,6 +84,7 @@ class Alan:
         for anahtar in [anahtar for anahtar in self._ciftler if kart in anahtar.split("-")]:
             if self._ciftler.pop(anahtar).birlikte:
                 self.biten += 1
+                self._oturumu_kapat(anahtar)
         self._sessiz.pop(kart, None)
         self._kayip_bildirildi.discard(kart)
 
@@ -89,6 +93,9 @@ class Alan:
         self.kenarlar.tasi(eski, yeni)
         tasinan = {kimlik_cifti(*(yeni if kimlik == eski else kimlik for kimlik in cift)) for cift in self.anlasmalar}
         self.anlasmalar = {(x, y) for x, y in tasinan if x != y}  # kişinin kendisiyle anlaşması olmaz
+        for oturum in self.oturumlar:
+            oturum.a = yeni if oturum.a == eski else oturum.a
+            oturum.b = yeni if oturum.b == eski else oturum.b
         if eski in self._bosta:
             self._bosta[yeni] = self._bosta.pop(eski)
         if eski in self._yalniz_bildirildi:
@@ -133,8 +140,13 @@ class Alan:
             kart_a, kart_b = anahtar.split("-")
             kisi_a, kisi_b = self.kisi(kart_a), self.kisi(kart_b)
             cift = kimlik_cifti(kisi_a.kisi_id, kisi_b.kisi_id)
-            if gecis is Gecis.BASLADI and cift in self.anlasmalar:
-                self.bildirimler.append(bildirim.tekrar(duvar, kisi_a, kisi_b, kart_a, kart_b))
+            if gecis is Gecis.BASLADI:
+                # Kayıt eşiğin aşıldığı ana geri tarihli: bekleme dakikası görüşmeye sayılır (kenar süresiyle aynı).
+                oturum = Oturum(kisi_a.kisi_id, kisi_b.kisi_id, self.gecen_sn - durum.ustunde_sn)
+                self.oturumlar.append(oturum)
+                self._acik_oturum[anahtar] = oturum
+                if cift in self.anlasmalar:
+                    self.bildirimler.append(bildirim.tekrar(duvar, kisi_a, kisi_b, kart_a, kart_b))
             if eklenen_sn:
                 self.kenarlar.ekle(kisi_a.kisi_id, kisi_b.kisi_id, eklenen_sn / 60, bildirim.karsi_rol(kisi_a, kisi_b))
                 gereken = bildirim.anlasma_suresi_sn(kisi_a, kisi_b, self.anlasma_sn)
@@ -143,8 +155,14 @@ class Alan:
                     self.bildirimler.append(bildirim.anlasma(duvar, kisi_a, kisi_b, kart_a, kart_b, durum.birlikte_sn))
             if gecis is Gecis.BITTI:
                 self.biten += 1
+                self._oturumu_kapat(anahtar)
             if not durum.birlikte and durum.ustunde_sn == 0:
                 del self._ciftler[anahtar]  # ne birlikte ne eşik üstünde: tutacak bilgi yok
+
+    def _oturumu_kapat(self, anahtar: str) -> None:
+        oturum = self._acik_oturum.pop(anahtar, None)
+        if oturum is not None:
+            oturum.end = self.gecen_sn
 
     def _kisileri_isle(self, dt: float, duvar: float, gelen: set[str]) -> None:
         birlikte_kartlar = {kart for anahtar in self.birlikte_ciftler() for kart in anahtar.split("-")}

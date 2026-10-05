@@ -65,6 +65,14 @@ def api_uclari(motor: Motor) -> APIRouter:
     async def kisi_sil(kisi_id: str) -> JSONResponse:
         return JSONResponse({"ok": True}) if motor.kisi_sil(kisi_id) else _hata(404, "kişi yok")
 
+    @yonlendirici.get("/sessions")
+    async def oturumlar() -> list[dict]:
+        return motor.oturumlar()
+
+    @yonlendirici.get("/assignments")
+    async def atamalar() -> list[dict]:
+        return motor.atamalar()
+
     @yonlendirici.get("/cards")
     async def kartlar() -> list[dict]:
         return motor.kartlar()

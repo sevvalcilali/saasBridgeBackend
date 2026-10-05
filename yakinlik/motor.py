@@ -14,7 +14,7 @@ from .ayar import Ayar
 from .cekirdek import atama
 from .cekirdek.alan import Alan
 from .cekirdek.csv_ice import AktarmaSonucu, iceri_aktar
-from .cekirdek.durum import Etkinlik, durum_uret, kartlar_uret
+from .cekirdek.durum import Etkinlik, atamalar_sozluk, durum_uret, kartlar_uret, oturumlar_sozluk
 from .cekirdek.kisi import Kisi, KisiDefteri
 from .giris.kaynak import TIK_SN, PaketKaynagi, Tik
 from .giris.olustur import kaynak_olustur
@@ -150,6 +150,14 @@ class Motor:
     def iade(self, kart: str, ayrildi: bool) -> None:
         self._benzetime_bildir(atama.iade(self._alan, kart, ayrildi, self._saat.simdi()))
         self._guncelle()
+
+    def oturumlar(self) -> list[dict]:
+        """Görüşme kayıtları (GET /api/sessions)."""
+        return oturumlar_sozluk(self._alan)
+
+    def atamalar(self) -> list[dict]:
+        """Zaman damgalı atama geçmişi (GET /api/assignments)."""
+        return atamalar_sozluk(self._alan)
 
     def kartlar(self) -> list[dict]:
         """Alıcının duyduğu kartlar (GET /api/cards)."""

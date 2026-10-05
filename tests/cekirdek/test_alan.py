@@ -113,7 +113,8 @@ def test_anlasma_yildiza_gore_sureden_sonra_bir_kez_duser():
     assert once == []
     assert turler(salon.alan) == ["deal"]
     (anlasma,) = salon.alan.bildirimler
-    assert (anlasma.severity, anlasma.title, anlasma.people) == ("deal", "Potansiyel anlaşma", ("2", "3"))
+    assert (anlasma.severity, anlasma.title, anlasma.people, anlasma.kisiler) == (
+        "deal", "Potansiyel anlaşma", ("2", "3"), ("k1", "k2"))
     assert anlasma.detail == "Ayşe Demir (★★★) ile Nova Robotik 8 dakikadır birlikte."
     assert salon.alan.anlasmalar == {("k1", "k2")}
 
