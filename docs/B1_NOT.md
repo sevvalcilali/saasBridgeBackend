@@ -1,6 +1,6 @@
 # B1 — Giriş katmanı + sinyal işleme: teslim notu
 
-> 04.10.2026 · dal `b1-giris-sinyal` · Durum: **kod bitti, bağımsız incelemeden geçti; Şevval'in onayı bekleniyor**
+> 04.10.2026 · dal `b1-giris-sinyal` · Durum: **bitti — bağımsız incelemeden geçti, Şevval onayladı (05.10.2026)**
 
 ## Ne yapıldı
 

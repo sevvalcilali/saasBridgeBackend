@@ -17,7 +17,7 @@
 ## ⏩ DEVİR NOTU (04.10.2026)
 
 - **Durum:** B0 (iskelet) bitti ve onaylandı (04.10.2026; teslim notu `docs/B0_NOT.md`). Sunucu
-  derlenmiş arayüzü ve `/api/health`'i veriyor; veri uçları yok. B1 (giriş katmanı + sinyal) kodu yazıldı — `b1-giris-sinyal` dalında, onay bekliyor (`docs/B1_NOT.md`); ekranda henüz değişiklik yok. Sıradaki: B2 (ayrı onay; öncesinde Bölüm 16.3 madde 1–5).
+  derlenmiş arayüzü ve `/api/health`'i veriyor; veri uçları yok. B1 (giriş katmanı + sinyal) bitti ve onaylandı (05.10.2026; `docs/B1_NOT.md`); ekranda henüz değişiklik yok. Sıradaki: B2 (ayrı onay; öncesinde Bölüm 16.3 madde 1–5).
 - **Çalıştırma:** `./baslat.sh` (ya da `.venv/bin/python -m yakinlik`) → `http://localhost:8002`; testler `.venv/bin/pytest`.
 - **Kardeş repo:** https://github.com/sevvalcilali/SaasBridge — arayüz, mock sunucu (`mock-server/mock.js`, davranışın çalışan
   şartnamesi), sözleşme belgesi (`SUNUCUDAN_ISTENENLER.md`), gereksinim belgesi (`UI_TASARIM_BRIEF.md` §2, §5, §9).
@@ -484,7 +484,7 @@ CREATE TABLE ayar      (anahtar TEXT PRIMARY KEY, deger TEXT);               -- 
 
 Durum işaretleri: ⬜ onay bekliyor · 🟡 devam ediyor · ✅ bitti ve onaylandı
 
-### 🟡 Faz B — Gerçek sunucu (Python) (planlandı 03.10.2026; B0 bitti 04.10.2026, sonraki fazlar ayrı onayla)
+### 🟡 Faz B — Gerçek sunucu (Python) (planlandı 03.10.2026; B0 bitti 04.10.2026, B1 bitti 05.10.2026, sonraki fazlar ayrı onayla)
 
 **Amaç:** Arayüzün mock'tan aldığı her şeyi gerçek bir sunucudan, aynı sözleşmeyle vermek. Gerekçe, mimari, veri modeli ve
 kurallar Bölüm 1–13'te; **burası uygulama sırası ve kabul ölçütleridir.** Her B fazı ayrı onayla başlar (Bölüm 0.1), kendi
@@ -524,7 +524,7 @@ commit'lerini alır, sonunda `docs/Bn_NOT.md` yazılır. Süreler tek kişi, tam
 - **Doğrulama / kabul:** `pytest` yeşil; SaasBridge'de `npm run build` sonrası `python -m yakinlik` → tarayıcıda `http://localhost:8002/`
   arayüz açılıyor ("Veri bekleniyor…" — henüz `/state` yok, çökmüyor); `.js` dosyaları doğru MIME; `/api/demo` 404.
 
-#### B1 🟡 Giriş katmanı + sinyal işleme (tahmin: 2 gün) — kod bitti (04.10.2026, dal `b1-giris-sinyal`), onay bekliyor
+#### B1 ✅ Giriş katmanı + sinyal işleme (tahmin: 2 gün) — bitti ve onaylandı (05.10.2026)
 - **Yapıldı** (ayrıntı ve gerekçeler: `docs/B1_NOT.md`):
   - B1.1 ✅ `Paket` plandaki dört alanla; kişi kartı kuralı arayüzdeki `kisiKartiMi` ile aynı.
   - B1.2 ✅ **Plandan sapma:** kaynak `list[Paket]` yerine `Tik` (tik anı + paketler) akışı üretir; işleme katmanı zamanı
