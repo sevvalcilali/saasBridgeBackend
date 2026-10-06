@@ -1,5 +1,6 @@
+-- DONDURULMUŞ: şema sürüm 2 (yükseltme testleri için; değiştirmeyin).
 -- Yakınlık sunucusunun kalıcı verisi (PLAN Bölüm 9): bellekteki alan modelinin aynası. Okuma bellekten yapılır; bu
--- dosya açılışta yükleme ve tik sonunda yazma içindir. Sürüm PRAGMA user_version'da (depo/sqlite.py SURUM = 3).
+-- dosya açılışta yükleme ve tik sonunda yazma içindir. Sürüm PRAGMA user_version'da (depo/sqlite.py SURUM = 2).
 -- Eski sürüm dosya açılışta yedeklenip yükseltilir (depo/sqlite.py _YUKSELTMELER); yeni sütunlar hep sonda.
 -- Kısıt yalnız birincil anahtar ve NOT NULL: bellekteki bir tutarsızlık yazımı kilitlememeli (yazılamayan veri kaybolur).
 -- kimlik / a / b: kişi kimliği ("k12"), kişisiz kart "kart:N", iade edilmiş kişisiz kart "arsiv:kart:N:sıra".
@@ -63,16 +64,7 @@ CREATE TABLE bildirim (
     title    TEXT NOT NULL,
     detail   TEXT NOT NULL,
     people   TEXT NOT NULL,        -- JSON dizisi: kart numaraları
-    kisiler  TEXT NOT NULL,        -- JSON dizisi: kişi kimlikleri
-    kural    TEXT NOT NULL DEFAULT ''  -- sürüm 3: kind "kural" ise tetikleyen kuralın kimliği
-);
-
-CREATE TABLE kural (               -- sürüm 3: organizatörün uyarı kuralları (etkinliğe özel; sıfırlamada kalır)
-    sira     INTEGER PRIMARY KEY,  -- kimliğin sayısı (r3 → 3)
-    kural_id TEXT NOT NULL,
-    ad       TEXT NOT NULL,
-    tanim    TEXT NOT NULL,        -- JSON: {kim, kiminle, dakika}
-    acik     INTEGER NOT NULL
+    kisiler  TEXT NOT NULL         -- JSON dizisi: kişi kimlikleri
 );
 
 CREATE TABLE anlasma (             -- anlaşma bildirimi çıkmış kimlik çiftleri
@@ -81,7 +73,7 @@ CREATE TABLE anlasma (             -- anlaşma bildirimi çıkmış kimlik çift
     PRIMARY KEY (a, b)
 );
 
-CREATE TABLE ayar (                -- JSON değerler: esik, gecen_sn, son_duvar, biten, emekli_sayac, kisi_sayac, kural_sayac
+CREATE TABLE ayar (                -- JSON değerler: esik, gecen_sn, son_duvar, biten, emekli_sayac, kisi_sayac
     anahtar  TEXT PRIMARY KEY,
     deger    TEXT NOT NULL
 );

@@ -383,7 +383,7 @@ def test_surum_1_dosyasi_once_yedeklenir_sonra_yukseltilir_veri_korunur(klasor):
     assert (kisi.sektor, kisi.asama, kisi.eposta, kisi.paylasim) == ("", "", "", False)
     assert [(o["a"], o["start"], o["end"]) for o in oturumlar_sozluk(alan)] == [("k1", 10.0, 70.0)]
     kolonlar, surum = sutunlar(klasor / DOSYA, "kisi")
-    assert surum == depo_modulu.SURUM == 2 and "paylasim" in kolonlar
+    assert surum == depo_modulu.SURUM == 3 and "paylasim" in kolonlar  # 1 → 2 → 3 tek işlemde
     (yedek,) = (klasor / "yedek").glob("yakinlik-surum-1-*.sqlite")
     assert sutunlar(yedek, "kisi")[1] == 1 and satir_sayisi(yedek, "kisi") == 1  # yükseltmeden önceki hal
 
@@ -392,7 +392,7 @@ def test_yukseltme_yarida_kalirsa_dosya_eski_haliyle_kalir(klasor, monkeypatch):
     # Kritik: şema değişikliği tek işlemde; bir adım bile başarısızsa hiçbir sütun eklenmemiş olmalı.
     surum_1_dosyasi(klasor)
     bozuk = "ALTER TABLE kisi ADD COLUMN sektor TEXT NOT NULL DEFAULT '';\nALTER TABLE olmayan ADD COLUMN x TEXT;"
-    monkeypatch.setattr(depo_modulu, "_YUKSELTMELER", {1: bozuk})
+    monkeypatch.setattr(depo_modulu, "_YUKSELTMELER", {**depo_modulu._YUKSELTMELER, 1: bozuk})
 
     with pytest.raises(ValueError, match="yükseltilemedi"):
         Depo.ac(klasor, DUVAR)
@@ -412,3 +412,65 @@ def test_silinen_kisinin_profili_de_satirinda_kalir(klasor):
     depo.kapat()
 
     assert satir_sayisi(klasor / DOSYA, "kisi WHERE silindi = 1 AND eposta = 's@ornek.com' AND paylasim = 1") == 1
+
+
+# --- Şema sürüm 3: uyarı kuralları (etkinliğe özel) ve bildirimdeki kural kimliği ---
+
+def kurallı_salon():
+    from yakinlik.cekirdek.kural import kural_coz
+    salon = Salon()
+    for i, govde in enumerate([
+        {"ad": "Ayşe & Mehmet", "kim": {"kisiler": ["k1"]}, "kiminle": {"kisiler": ["k2"]}, "dakika": 0},
+        {"kim": {"rol": "investor", "enAzYildiz": 3}, "kiminle": {"rol": "founder"}, "dakika": 5, "acik": False},
+    ], 1):
+        salon.alan.kurallar.append(kural_coz(govde, f"r{i}", {"k1", "k2", "k3", "k4"}))
+    salon.alan.kural_sayac = 3  # r3 silinmiş: kimliği yeniden kullanılmaz
+    return salon.gecir(90.0, {("2", "3"): YAKIN})
+
+
+def test_kurallar_ve_kural_uyarisi_kapanip_acilinca_ayni():
+    salon = kurallı_salon()
+
+    _, kalici = yaz_ve_yeniden_ac(salon_klasoru(), salon)
+    alan = kalici.alan()
+
+    assert [k.sozluk() for k in alan.kurallar] == [k.sozluk() for k in salon.alan.kurallar]
+    assert alan.kural_sayac == 3
+    (uyari,) = [b for b in alan.bildirimler if b.kind == "kural"]
+    assert (uyari.kural, uyari.title) == ("r1", "Ayşe & Mehmet")
+    assert alan.bildirimler == salon.alan.bildirimler
+
+
+def salon_klasoru():
+    import tempfile
+    return Path(tempfile.mkdtemp()) / "veri"
+
+
+def surum_2_dosyasi(klasor):
+    klasor.mkdir()
+    db = sqlite3.connect(klasor / DOSYA)
+    db.executescript((Path(__file__).parent / "sema_v2.sql").read_text(encoding="utf-8") + "\nPRAGMA user_version = 2;")
+    db.execute("INSERT INTO kisi VALUES (1, 'k1', 'Ayşe', 'investor', 'Fon', 3, '#111', '', '2', 0, 0, "
+               "'Sağlık', '', '', '', 'a@fon.vc', 1)")
+    db.execute("INSERT INTO bildirim VALUES (1, 1.0, '10:00', 'lost', 'serious', 'Kart sinyali kesildi', 'x', '[\"2\"]', '[\"k1\"]')")
+    ayar = {"esik": -70, "gecen_sn": 90.0, "son_duvar": DUVAR, "biten": 0, "emekli_sayac": 0, "kisi_sayac": 1}
+    db.executemany("INSERT INTO ayar VALUES (?, ?)", [(k, json.dumps(v)) for k, v in ayar.items()])
+    db.commit()
+    db.close()
+
+
+def test_surum_2_dosyasi_yedeklenip_3e_yukseltilir_profil_ve_bildirim_korunur(klasor):
+    surum_2_dosyasi(klasor)
+
+    depo = Depo.ac(klasor, DUVAR)
+    alan = depo.yukle(DUVAR).alan()
+    depo.kapat()
+
+    (kisi,) = alan.defter.kisiler()
+    assert (kisi.sektor, kisi.eposta, kisi.paylasim) == ("Sağlık", "a@fon.vc", True)
+    (b,) = alan.bildirimler
+    assert (b.kind, b.kural) == ("lost", "")
+    assert (alan.kurallar, alan.kural_sayac) == ([], 0)
+    assert sutunlar(klasor / DOSYA, "kural")[1] == 3
+    (yedek,) = (klasor / "yedek").glob("yakinlik-surum-2-*.sqlite")
+    assert sutunlar(yedek, "kisi")[1] == 2

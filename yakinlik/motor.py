@@ -19,6 +19,7 @@ from .cekirdek.alan import Alan
 from .cekirdek.csv_ice import AktarmaSonucu, iceri_aktar
 from .cekirdek.durum import Etkinlik, atamalar_sozluk, durum_uret, js_yuvarla, kartlar_uret, oturumlar_sozluk
 from .cekirdek.kisi import PROFIL_METINLERI, Kisi, KisiDefteri
+from .cekirdek.kural import kural_coz
 from .depo.sqlite import Depo
 from .giris.benzetim import Benzetim
 from .giris.kaynak import TIK_SN, PaketKaynagi, Tik
@@ -202,6 +203,42 @@ class Motor:
         self._benzetime_bildir(atama.iade(self._alan, kart, ayrildi, self._saat.simdi()))
         self._kaydet()
         self._guncelle()
+
+    # --- uyarı kuralları (Şevval isteği 2026-10-06): masada kurulur, etkinliğe özel, diske hemen yazılır ---
+
+    def kurallar(self) -> list[dict]:
+        return [kural.sozluk() for kural in self._alan.kurallar]
+
+    def _kisi_adlari(self) -> dict[str, str]:
+        return {kisi.kisi_id: kisi.gorunen_ad for kisi in self.defter.kisiler()}
+
+    def kural_ekle(self, govde: Mapping[str, object]) -> dict | str:
+        """Yeni kural; geçersizse hata metni. Kimlik sıra no'yla (silinen kuralınki yeniden kullanılmaz)."""
+        kural = kural_coz(govde, f"r{self._alan.kural_sayac + 1}", self._kisi_adlari())
+        if isinstance(kural, str):
+            return kural
+        self._alan.kural_sayac += 1
+        self._alan.kurallar.append(kural)
+        self._kaydet()
+        return kural.sozluk()
+
+    def kural_guncelle(self, kural_id: str, govde: Mapping[str, object]) -> dict | str | None:
+        """Yalnız verilen alanlar değişir; kural yoksa None, geçersizse hata metni."""
+        sira = next((i for i, k in enumerate(self._alan.kurallar) if k.kural_id == kural_id), None)
+        if sira is None:
+            return None
+        kural = kural_coz({**self._alan.kurallar[sira].sozluk(), **govde}, kural_id, self._kisi_adlari())
+        if isinstance(kural, str):
+            return kural
+        self._alan.kurallar[sira] = kural
+        self._kaydet()
+        return kural.sozluk()
+
+    def kural_sil(self, kural_id: str) -> bool:
+        once = len(self._alan.kurallar)
+        self._alan.kurallar = [k for k in self._alan.kurallar if k.kural_id != kural_id]
+        self._kaydet()
+        return len(self._alan.kurallar) < once
 
     def oturumlar(self) -> list[dict]:
         """Görüşme kayıtları (GET /api/sessions)."""

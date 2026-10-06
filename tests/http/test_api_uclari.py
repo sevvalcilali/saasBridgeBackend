@@ -280,3 +280,51 @@ async def test_profil_alanlari_eklenir_duzenlenir_listede_doner(istemci):
     assert {k: kisi[k] for k in ("sektor", "asama", "tanitim", "web", "eposta", "paylasim")} == {
         "sektor": "Sağlık", "asama": "gelir", "tanitim": "Evde tahlil", "web": "nova.com", "eposta": "can@nova.com",
         "paylasim": False}
+
+
+# --- uyarı kuralları (Şevval isteği 2026-10-06) ---
+
+KURAL = {"ad": "Ayşe & Mehmet", "kim": {"kisiler": ["k1"]}, "kiminle": {"kisiler": ["k2"]}, "dakika": 0}
+
+
+async def test_kural_eklenir_listelenir_kapatilir_silinir(istemci):
+    eklenen = await gonder(istemci, "POST", "/api/rules", KURAL)
+    grup = await gonder(istemci, "POST", "/api/rules", {"kim": {"rol": "investor", "enAzYildiz": 4}, "kiminle": {"rol": "founder"}, "dakika": 5})
+    kapali = await gonder(istemci, "PATCH", "/api/rules/r1", {"acik": False})
+    liste = (await istemci.get("/api/rules")).json()
+    silindi = await gonder(istemci, "DELETE", "/api/rules/r1", {})
+    sonra = (await istemci.get("/api/rules")).json()
+
+    assert eklenen.json() == {**KURAL, "kuralId": "r1", "acik": True}
+    assert grup.json()["ad"] == "★4+ yatırımcılar ile girişimciler · 5 dk"
+    assert kapali.json()["acik"] is False and [k["kuralId"] for k in liste] == ["r1", "r2"]
+    assert silindi.json() == {"ok": True} and [k["kuralId"] for k in sonra] == ["r2"]
+    assert (await gonder(istemci, "POST", "/api/rules", KURAL)).json()["kuralId"] == "r3"  # kimlik yeniden kullanılmaz
+
+
+async def test_kural_ad_verilmezse_kisi_adlariyla_adlandirilir(istemci):
+    yanit = await gonder(istemci, "POST", "/api/rules", {**KURAL, "ad": ""})
+
+    assert yanit.json()["ad"] == "Ayşe Demir ile Nova Robotik · yan yana"
+
+
+@pytest.mark.parametrize(("yontem", "yol", "govde", "kod"), [
+    ("POST", "/api/rules", {**KURAL, "kim": {"kisiler": ["k99"]}}, 400),
+    ("POST", "/api/rules", b"bozuk", 400),
+    ("PATCH", "/api/rules/r9", {"acik": False}, 404),
+    ("DELETE", "/api/rules/r9", {}, 404),
+])
+async def test_kural_hatalari_sozlesme_govdesiyle(istemci, yontem, yol, govde, kod):
+    yanit = await gonder(istemci, yontem, yol, govde)
+
+    assert yanit.status_code == kod and yanit.json()["ok"] is False and yanit.json()["hata"]
+
+
+async def test_kural_tetiklenince_uyari_durumda_kural_kimligiyle(istemci, motor):
+    await gonder(istemci, "POST", "/api/rules", KURAL)
+    for i in range(2, 200):
+        motor.isle(tik_uret(i * 0.5, {("2", "3"): YAKIN}))
+
+    uyarilar = [b for b in (await istemci.get("/state")).json()["alerts"] if b["kind"] == "kural"]
+
+    assert [(b["title"], b["kural"], b["severity"], b["people"]) for b in uyarilar] == [("Ayşe & Mehmet", "r1", "kural", ["2", "3"])]

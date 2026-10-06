@@ -20,11 +20,12 @@ from ..cekirdek.alan import Alan
 from ..cekirdek.atama import AtamaKaydi
 from ..cekirdek.bildirim import Bildirim
 from ..cekirdek.kisi import Kisi, KisiDefteri
+from ..cekirdek.kural import kural_tanimi, kural_yukle
 from ..cekirdek.oturum import Oturum
 
 gunluk = logging.getLogger(__name__)
 
-SURUM = 2  # şema sürümü (PRAGMA user_version)
+SURUM = 3  # şema sürümü (PRAGMA user_version)
 DOSYA = "yakinlik.sqlite"
 YEDEK_KLASORU = "yedek"
 ACILIS_YEDEGI_SAKLA = 10  # açılış yedeklerinin en yenileri tutulur; sıfırlama ve yeni etkinlik yedekleri hiç silinmez
@@ -39,6 +40,11 @@ ALTER TABLE kisi ADD COLUMN web TEXT NOT NULL DEFAULT '';
 ALTER TABLE kisi ADD COLUMN eposta TEXT NOT NULL DEFAULT '';
 ALTER TABLE kisi ADD COLUMN paylasim INTEGER NOT NULL DEFAULT 0;
 """,
+    2: """
+ALTER TABLE bildirim ADD COLUMN kural TEXT NOT NULL DEFAULT '';
+CREATE TABLE kural (sira INTEGER PRIMARY KEY, kural_id TEXT NOT NULL, ad TEXT NOT NULL, tanim TEXT NOT NULL,
+                    acik INTEGER NOT NULL);
+""",
 }
 
 # tablo → (birincil anahtar sütunları, bütün sütunlar). Anahtar sütunları başta: satırın anahtarı satir[:len(anahtar)].
@@ -49,7 +55,8 @@ _TABLOLAR = {
     "oturum": (("id",), ("id", "a", "b", "start_s", "end_s")),
     "kenar": (("a", "b"), ("a", "b", "dakika")),
     "toplam": (("kimlik",), ("kimlik", "sure", "karma")),
-    "bildirim": (("id",), ("id", "t", "clock", "kind", "severity", "title", "detail", "people", "kisiler")),
+    "bildirim": (("id",), ("id", "t", "clock", "kind", "severity", "title", "detail", "people", "kisiler", "kural")),
+    "kural": (("sira",), ("sira", "kural_id", "ad", "tanim", "acik")),
     "anlasma": (("a", "b"), ("a", "b")),
     "ayar": (("anahtar",), ("anahtar", "deger")),
 }
@@ -171,7 +178,7 @@ def _satirlar(alan: Alan, simdi: float, onceki_kisiler: Mapping[tuple, tuple]) -
     sure, karma = alan.kenarlar.sure, alan.kenarlar.karma
     ayar = {
         "esik": alan.esik, "gecen_sn": alan.gecen_sn, "son_duvar": simdi, "biten": alan.biten,
-        "emekli_sayac": alan.emekli_sayac, "kisi_sayac": alan.defter.sayac,
+        "emekli_sayac": alan.emekli_sayac, "kisi_sayac": alan.defter.sayac, "kural_sayac": alan.kural_sayac,
     }
     return {
         "kisi": kisi,
@@ -181,8 +188,13 @@ def _satirlar(alan: Alan, simdi: float, onceki_kisiler: Mapping[tuple, tuple]) -
         "toplam": {(kimlik,): (kimlik, sure.get(kimlik), karma.get(kimlik)) for kimlik in sure.keys() | karma.keys()},
         "bildirim": {
             (i,): (i, b.t, b.clock, b.kind, b.severity, b.title, b.detail,
-                   json.dumps(b.people, ensure_ascii=False), json.dumps(b.kisiler, ensure_ascii=False))
+                   json.dumps(b.people, ensure_ascii=False), json.dumps(b.kisiler, ensure_ascii=False), b.kural)
             for i, b in enumerate(alan.bildirimler, 1)
+        },
+        "kural": {
+            (int(k.kural_id.removeprefix("r")),): (int(k.kural_id.removeprefix("r")), k.kural_id, k.ad,
+                                                    json.dumps(kural_tanimi(k), ensure_ascii=False), int(k.acik))
+            for k in alan.kurallar
         },
         "anlasma": {cift: cift for cift in alan.anlasmalar},
         "ayar": {(anahtar,): (anahtar, json.dumps(deger)) for anahtar, deger in ayar.items()},
@@ -219,9 +231,13 @@ class Kalici:
         alan.kenarlar.sure = {kimlik: sure for kimlik, sure, _ in t["toplam"].values() if sure is not None}
         alan.kenarlar.karma = {kimlik: karma for kimlik, _, karma in t["toplam"].values() if karma is not None}
         alan.bildirimler = [
-            Bildirim(zaman, saat, tur, derece, baslik, ayrinti, tuple(json.loads(kartlar)), tuple(json.loads(kimlikler)))
-            for _, zaman, saat, tur, derece, baslik, ayrinti, kartlar, kimlikler in _sirali(t["bildirim"])
+            Bildirim(zaman, saat, tur, derece, baslik, ayrinti, tuple(json.loads(kartlar)), tuple(json.loads(kimlikler)),
+                     kural)
+            for _, zaman, saat, tur, derece, baslik, ayrinti, kartlar, kimlikler, kural in _sirali(t["bildirim"])
         ]
+        alan.kurallar = [kural_yukle(kural_id, ad, json.loads(tanim), bool(acik))
+                         for _, kural_id, ad, tanim, acik in _sirali(t["kural"])]
+        alan.kural_sayac = max([ayar.get("kural_sayac", 0), *(sira for (sira,) in t["kural"])])
         alan.anlasmalar = set(t["anlasma"])
         alan.atama_gecmisi = [AtamaKaydi(zaman, kisi_id, kart, islem) for _, zaman, kisi_id, kart, islem
                               in _sirali(t["atama"])]
