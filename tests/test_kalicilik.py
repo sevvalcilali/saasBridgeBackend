@@ -222,3 +222,12 @@ def test_kapanirken_diske_yazilamazsa_kaybolan_veri_gunlukte_acikca_yazar(tmp_pa
 
     hatalar = [k for k in caplog.records if k.levelname == "ERROR" and "kapanırken" in k.getMessage()]
     assert len(hatalar) == 1 and str(tmp_path / "yakinlik.sqlite") in hatalar[0].getMessage()
+
+
+def test_kurallar_masada_kurulur_diske_hemen_yazilir_yeniden_acilista_gelir(tmp_path):
+    motor = ac(tmp_path)
+    motor.kural_ekle({"ad": "Önemli", "kim": {"rol": "investor", "enAzYildiz": 4}, "kiminle": {"rol": "founder"}, "dakika": 5})
+    motor.kural_guncelle("r1", {"acik": False})
+    oldur(motor)
+
+    assert ac(tmp_path).kurallar() == motor.kurallar() and motor.kurallar()[0]["acik"] is False

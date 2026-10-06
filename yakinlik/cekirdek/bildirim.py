@@ -17,16 +17,18 @@ ANLASMA_DK = {2: 11, 3: 8, 4: 11, 5: 8}
 class Bildirim:
     t: float  # duvar saati (epoch sn)
     clock: str  # "SS:DD"
-    kind: str  # deal | repeat | idle_investor | lost | no_investor
-    severity: str  # deal | warn | serious
+    kind: str  # deal | repeat | idle_investor | lost | no_investor | kural (organizatörün uyarı kuralı)
+    severity: str  # deal | warn | serious | kural
     title: str
     detail: str
     people: tuple[str, ...]  # kart numaraları (/state sözleşmesi)
     kisiler: tuple[str, ...]  # aynı sırayla kişi kimlikleri: kart sonradan değişse de doğru kişi (Soru 7)
+    kural: str = ""  # kind "kural" ise tetikleyen kuralın kimliği (panoda açılır uyarı)
 
     def sozluk(self) -> dict:
         return {"t": self.t, "clock": self.clock, "kind": self.kind, "severity": self.severity,
-                "title": self.title, "detail": self.detail, "people": list(self.people), "kisiler": list(self.kisiler)}
+                "title": self.title, "detail": self.detail, "people": list(self.people), "kisiler": list(self.kisiler),
+                "kural": self.kural}
 
 
 def karsi_rol(a: Kisi, b: Kisi) -> bool:
@@ -74,3 +76,10 @@ def kayip(duvar: float, kisi: Kisi, kart: str) -> Bildirim:
 def yalniz(duvar: float, kisi: Kisi, kart: str) -> Bildirim:
     return _bildirim(duvar, "idle_investor", "warn", "Önemli yatırımcı yalnız",
                      f"{kisi.ad} ({_yildiz(kisi)}) 6 dk'dır kimseyle görüşmüyor.", (kisi, kart))
+
+
+def kural_uyarisi(duvar: float, kural, a: Kisi, b: Kisi, kart_a: str, kart_b: str) -> Bildirim:
+    """Organizatörün uyarı kuralı tetiklendi (cekirdek/kural.py): başlık kuralın adı."""
+    ne = f"{kural.dakika:g} dakikadır birlikte." if kural.dakika else "yan yana geldi."
+    temel = _bildirim(duvar, "kural", "kural", kural.ad, f"{a.gorunen_ad} ile {b.gorunen_ad} {ne}", (a, kart_a), (b, kart_b))
+    return Bildirim(**{**temel.__dict__, "kural": kural.kural_id})

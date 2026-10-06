@@ -67,6 +67,28 @@ def api_uclari(motor: Motor) -> APIRouter:
     async def kisi_sil(kisi_id: str) -> JSONResponse:
         return JSONResponse({"ok": True}) if motor.kisi_sil(kisi_id) else _hata(404, "kişi yok")
 
+    @yonlendirici.get("/rules")
+    async def kurallar() -> list[dict]:
+        return motor.kurallar()
+
+    @yonlendirici.post("/rules")
+    async def kural_ekle(istek: Request) -> JSONResponse:
+        govde = await _json(istek)
+        sonuc = motor.kural_ekle(govde) if isinstance(govde, dict) else "geçersiz kural"
+        return _hata(400, sonuc) if isinstance(sonuc, str) else JSONResponse(sonuc)
+
+    @yonlendirici.patch("/rules/{kural_id}")
+    async def kural_guncelle(kural_id: str, istek: Request) -> JSONResponse:
+        govde = await _json(istek)
+        sonuc = motor.kural_guncelle(kural_id, govde if isinstance(govde, dict) else {})
+        if sonuc is None:
+            return _hata(404, "kural yok")
+        return _hata(400, sonuc) if isinstance(sonuc, str) else JSONResponse(sonuc)
+
+    @yonlendirici.delete("/rules/{kural_id}")
+    async def kural_sil(kural_id: str) -> JSONResponse:
+        return JSONResponse({"ok": True}) if motor.kural_sil(kural_id) else _hata(404, "kural yok")
+
     @yonlendirici.get("/sessions")
     async def oturumlar() -> list[dict]:
         return motor.oturumlar()

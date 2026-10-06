@@ -34,6 +34,8 @@ class Alan:
         self._ilk_gecen = gecen
         # Etkinlik saatinin sıfır anı, kaynak saatinde (sıfırlamada yenilenir); ilk tikte belli olabilir.
         self._baz = None if baslangic is None else baslangic - gecen
+        self.kurallar: list = []  # Kural (cekirdek/kural.py): etkinliğin uyarı kuralları; sıfırlamada kalır
+        self.kural_sayac = 0  # kural kimliği sıra no (silinen kuralın kimliği yeniden kullanılmaz)
         self._durumu_temizle()
 
     def _durumu_temizle(self) -> None:
@@ -50,6 +52,7 @@ class Alan:
         self.oturumlar: list = []  # Oturum (cekirdek/oturum.py): görüşme kayıtları; sıfırlamada silinir
         self._acik_oturum: dict = {}  # çift anahtarı → açık Oturum
         self.emekli_sayac = 0  # iade edilen kişisiz kartların eski kimlikleri için sıra no
+        self._kural_tetiklendi: set[tuple[str, str]] = set()  # (kural, çift anahtarı): bu görüşmede uyarı verildi
 
     @property
     def gecen_sn(self) -> float:
@@ -90,6 +93,7 @@ class Alan:
             if self._ciftler.pop(anahtar).birlikte:
                 self.biten += 1
                 self._oturumu_kapat(anahtar)
+            self._kurallari_unut(anahtar)
         self._sessiz.pop(kart, None)
         self._kayip_bildirildi.discard(kart)
 
@@ -161,11 +165,28 @@ class Alan:
                 if cift not in self.anlasmalar and gereken is not None and durum.birlikte_sn >= gereken:
                     self.anlasmalar.add(cift)
                     self.bildirimler.append(bildirim.anlasma(duvar, kisi_a, kisi_b, kart_a, kart_b, durum.birlikte_sn))
+            if durum.birlikte:
+                self._kurallari_dene(anahtar, durum.birlikte_sn, kisi_a, kisi_b, kart_a, kart_b, duvar)
             if gecis is Gecis.BITTI:
                 self.biten += 1
                 self._oturumu_kapat(anahtar)
+                self._kurallari_unut(anahtar)
             if not durum.birlikte and durum.ustunde_sn == 0:
                 del self._ciftler[anahtar]  # ne birlikte ne eşik üstünde: tutacak bilgi yok
+
+    def _kurallari_dene(self, anahtar: str, birlikte_sn: float, kisi_a: Kisi, kisi_b: Kisi, kart_a: str, kart_b: str,
+                        duvar: float) -> None:
+        """Açık kurallardan bu çifte uyan ve süresi dolanlar uyarı verir; her kural bu görüşmede bir kez."""
+        for kural in self.kurallar:
+            if not kural.acik or (kural.kural_id, anahtar) in self._kural_tetiklendi or birlikte_sn < kural.dakika * 60:
+                continue
+            if kural.ciftine_uyar(kisi_a, kisi_b):
+                self._kural_tetiklendi.add((kural.kural_id, anahtar))
+                self.bildirimler.append(bildirim.kural_uyarisi(duvar, kural, kisi_a, kisi_b, kart_a, kart_b))
+
+    def _kurallari_unut(self, anahtar: str) -> None:
+        """Görüşme bitti: aynı çift yeniden buluşursa kurallar yine uyarabilir."""
+        self._kural_tetiklendi = {x for x in self._kural_tetiklendi if x[1] != anahtar}
 
     def _oturumu_kapat(self, anahtar: str) -> None:
         oturum = self._acik_oturum.pop(anahtar, None)
