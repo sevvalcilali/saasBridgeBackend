@@ -37,7 +37,7 @@ def tik_uret(t, ciftler=None, sessiz=(), kartlar=KARTLAR):
         if a in duyulan and b in duyulan:
             duyulan[a].append((b, rssi))
             duyulan[b].append((a, rssi))
-    return Tik(t, tuple(Paket(kart, tuple(liste), 80, t) for kart, liste in duyulan.items()))
+    return Tik(t, tuple(Paket(kart, tuple(liste), t) for kart, liste in duyulan.items()))
 
 
 class Salon:

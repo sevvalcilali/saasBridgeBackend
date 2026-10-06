@@ -12,9 +12,9 @@ from yakinlik.giris.olustur import kaynak_olustur
 from yakinlik.giris.paket import Paket
 
 ORNEK_TIKLER = [
-    Tik(0.5, (Paket("7", (("12", -53.25),), 88, 0.5), Paket("12", (), None, 0.5))),
+    Tik(0.5, (Paket("7", (("12", -53.25),), 0.5), Paket("12", (), 0.5))),
     Tik(1.0, ()),  # alıcı kopuk: paket yok, tik var
-    Tik(2.5, (Paket("7", (), 88, 2.5),)),
+    Tik(2.5, (Paket("7", (), 2.5),)),
 ]
 
 
@@ -37,11 +37,11 @@ async def test_kaydeden_kaynak_tikleri_aynen_iletir_ve_satir_satir_yazar(tmp_pat
     assert iletilen == ORNEK_TIKLER
     assert [json.loads(satir) for satir in dosya.read_text(encoding="utf-8").splitlines()] == [
         {"t": 0.5, "paketler": [
-            {"kart": "7", "duyulanlar": [["12", -53.25]], "pil": 88, "t": 0.5, "alici_rssi": None},
-            {"kart": "12", "duyulanlar": [], "pil": None, "t": 0.5, "alici_rssi": None},
+            {"kart": "7", "duyulanlar": [["12", -53.25]], "t": 0.5, "alici_rssi": None},
+            {"kart": "12", "duyulanlar": [], "t": 0.5, "alici_rssi": None},
         ]},
         {"t": 1.0, "paketler": []},
-        {"t": 2.5, "paketler": [{"kart": "7", "duyulanlar": [], "pil": 88, "t": 2.5, "alici_rssi": None}]},
+        {"t": 2.5, "paketler": [{"kart": "7", "duyulanlar": [], "t": 2.5, "alici_rssi": None}]},
     ]
 
 
@@ -87,7 +87,7 @@ async def test_kaydeden_kaynak_var_olan_dosyanin_ustune_yazmaz(tmp_path, ilk_tik
 
 
 async def test_sonlu_olmayan_dbm_kayda_yazilmaz(tmp_path, ilk_tikler):
-    tik = Tik(0.5, (Paket("7", (("12", float("nan")),), None, 0.5),))
+    tik = Tik(0.5, (Paket("7", (("12", float("nan")),), 0.5),))
 
     with pytest.raises(ValueError):
         await ilk_tikler(KaydedenKaynak(SabitKaynak([tik]), tmp_path / "iz.jsonl"))
@@ -118,8 +118,6 @@ async def test_bozuk_iz_satiri_satir_numarasiyla_reddedilir(tmp_path, bekleme_yo
         '{"kart": "7", "duyulanlar": [["12", NaN]], "pil": null, "t": 0.5}',  # dBm sonlu olmalı
         '{"kart": "7", "duyulanlar": [["12", true]], "pil": null, "t": 0.5}',
         '{"kart": "7", "duyulanlar": [[12, -50]], "pil": null, "t": 0.5}',
-        '{"kart": "7", "duyulanlar": [], "pil": "yüz", "t": 0.5}',
-        '{"kart": "7", "duyulanlar": [], "pil": true, "t": 0.5}',
         '{"kart": "7", "duyulanlar": [], "pil": null, "t": "a"}',
     ],
 )
@@ -257,10 +255,20 @@ def test_seri_kaynak_henuz_yok():
 
 async def test_alicinin_duydugu_guc_kayda_yazilir_eski_izde_yoksa_bos(tmp_path, bekleme_yok, ilk_tikler):
     dosya = tmp_path / "iz.jsonl"
-    tik = Tik(0.5, (Paket("7", (), 88, 0.5, alici_rssi=-71.5),))
+    tik = Tik(0.5, (Paket("7", (), 0.5, alici_rssi=-71.5),))
     await ilk_tikler(KaydedenKaynak(SabitKaynak([tik]), dosya))
     eski = tmp_path / "eski.jsonl"
     eski.write_text('{"t": 0.5, "paketler": [{"kart": "7", "duyulanlar": [], "pil": 88, "t": 0.5}]}\n', encoding="utf-8")
 
     assert await ilk_tikler(KayitKaynak(dosya, bekle=bekleme_yok)) == [tik]
     assert (await ilk_tikler(KayitKaynak(eski, bekle=bekleme_yok)))[0].paketler[0].alici_rssi is None
+
+
+async def test_eski_izdeki_pil_alani_yok_sayilir(tmp_path, bekleme_yok, ilk_tikler):
+    # Pil artık tutulmuyor (Şevval kararı 07.10.2026); eski izlerdeki pil (türü ne olursa olsun) okumayı bozmaz.
+    eski = tmp_path / "eski.jsonl"
+    eski.write_text('{"t": 0.5, "paketler": [{"kart": "7", "duyulanlar": [], "pil": "yüz", "t": 0.5}]}\n', encoding="utf-8")
+
+    (tik,) = await ilk_tikler(KayitKaynak(eski, bekle=bekleme_yok))
+
+    assert tik.paketler == (Paket("7", (), 0.5),)

@@ -221,10 +221,10 @@ async def test_kart_listesi_alicinin_duydugu_butun_kartlar(istemci, motor):
 
     kartlar = {k["kart"]: k for k in yanit.json()}
     assert yanit.status_code == 200
-    assert [sorted(k) for k in kartlar.values()] == [["atanan", "kart", "pil", "rssiAlici", "seenAgo"]] * 6
+    assert [sorted(k) for k in kartlar.values()] == [["atanan", "kart", "rssiAlici", "seenAgo"]] * 6  # pil yok
     assert list(kartlar) == ["2", "3", "4", "5", "14", "101"]  # numara sırasıyla; dinleyici de (arayüz eler)
     assert (kartlar["2"]["atanan"], kartlar["14"]["atanan"], kartlar["101"]["atanan"]) == ("k1", None, None)
-    assert (kartlar["2"]["seenAgo"], kartlar["2"]["pil"]) == (0.0, 80)
+    assert kartlar["2"]["seenAgo"] == 0.0
 
 
 async def test_kart_listesi_atamayi_hemen_gosterir(istemci):

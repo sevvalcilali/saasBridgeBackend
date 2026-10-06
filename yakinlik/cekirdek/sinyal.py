@@ -92,7 +92,7 @@ class SinyalDeposu:
     def __init__(self) -> None:
         self._ciftler: dict[str, _CiftKaydi] = {}  # çift anahtarı → ölçümler (ilk duyulma sırasıyla)
         self._kart_son: dict[str, float] = {}  # kart → kendi son paketinin anı (ilk duyulma sırasıyla)
-        self._kart_bilgi: dict[str, tuple[int | None, float | None]] = {}  # kart → son paketin (pil, alıcı gücü)
+        self._alici_gucu: dict[str, float | None] = {}  # kart → son paketin alıcı gücü
         self._alici_son: float | None = None  # alıcıdan gelen son paketin anı
 
     def ekle(self, paketler: Iterable[Paket]) -> None:
@@ -101,7 +101,7 @@ class SinyalDeposu:
         yeni: dict[str, dict] = {}
         for paket in paketler:
             if paket.t >= self._kart_son.get(paket.kart, paket.t):
-                self._kart_bilgi[paket.kart] = (paket.pil, paket.alici_rssi)
+                self._alici_gucu[paket.kart] = paket.alici_rssi
             self._kart_son[paket.kart] = max(paket.t, self._kart_son.get(paket.kart, paket.t))
             self._alici_son = paket.t if self._alici_son is None else max(self._alici_son, paket.t)
             if paket.dinleyici:
@@ -157,11 +157,11 @@ class SinyalDeposu:
         son = self._kart_son.get(kart)
         return None if son is None else simdi - son
 
-    def kart_bilgisi(self, kart: str, simdi: float) -> tuple[float, int | None, float | None] | None:
-        """(görülme yaşı, pil, alıcının duyduğu güç) — kartın en yeni paketinden; hiç duyulmadıysa None."""
+    def kart_bilgisi(self, kart: str, simdi: float) -> tuple[float, float | None] | None:
+        """(görülme yaşı, alıcının duyduğu güç) — kartın en yeni paketinden; hiç duyulmadıysa None."""
         if kart not in self._kart_son:
             return None
-        return (simdi - self._kart_son[kart], *self._kart_bilgi[kart])
+        return (simdi - self._kart_son[kart], self._alici_gucu[kart])
 
     def duyulan_kartlar(self) -> list[str]:
         """Alıcının en az bir kez duyduğu bütün kartlar (dinleyiciler dahil), ilk duyulma sırasıyla."""
