@@ -4,7 +4,7 @@ from statistics import mean
 import pytest
 
 from yakinlik.cekirdek.sinyal import SinyalDeposu
-from yakinlik.giris.benzetim import Benzetim, BenzetimKaynak
+from yakinlik.giris.benzetim import EN_BUYUK_GRUP, Benzetim, BenzetimKaynak
 
 # Yan yana duran çift ≈ −52 dBm, ayrılan çift ≈ −84 dBm duyulur; arası boş kalır.
 GUCLU, ZAYIF = -66.0, -74.0
@@ -160,13 +160,10 @@ def test_hicbir_gorusme_14_dakikadan_uzun_surmez():
     assert 10 * 60 < en_uzun <= 14 * 60
 
 
-def test_yatirimci_ile_girisimci_birbirini_daha_cok_bulur():
-    # Mock: boştaki kart %70 olasılıkla karşı rolden birini seçer. Bu eğilim pano istatistiklerini (karma
-    # görüşme, yatırımcıya ulaşan girişimci) ve anlaşma bildirimlerini besler. Eğilim varken çiftlerin
-    # ~%65'i yatırımcı–girişimci, yokken ~%40 (20 tohum × 15 dk ile ölçüldü, 04.10.2026).
+def karma_orani(gruplar):
     karma = toplam = 0
     for tohum in range(20):
-        benzetim = Benzetim(kisi=25, tohum=tohum, kopma=False)
+        benzetim = Benzetim(kisi=25, tohum=tohum, kopma=False, gruplar=gruplar)
         rol = {kisi.kart: kisi.rol for kisi in benzetim.kadro}
         bulusan = set()
         for tik in kos(benzetim, 15 * 60):
@@ -176,22 +173,52 @@ def test_yatirimci_ile_girisimci_birbirini_daha_cok_bulur():
             }
         toplam += len(bulusan)
         karma += sum({rol[x] for x in cift} == {"investor", "founder"} for cift in bulusan)
+    return karma / toplam
 
-    assert karma / toplam > 0.52
+
+def test_yatirimci_ile_girisimci_birbirini_daha_cok_bulur():
+    # Mock: boştaki kart %70 olasılıkla karşı rolden birini seçer. Bu eğilim pano istatistiklerini (karma
+    # görüşme, yatırımcıya ulaşan girişimci) ve anlaşma bildirimlerini besler. Eğilim varken çiftlerin
+    # ~%65'i yatırımcı–girişimci, yokken ~%40 (20 tohum × 15 dk ile ölçüldü, 04.10.2026).
+    assert karma_orani(gruplar=False) > 0.52  # mock birebir (yalnız ikili)
+    # Gruplarda aynı rolden çiftler de oluşur (iki yatırımcı aynı girişimciyle); eğilim yine belirgin (~%51).
+    assert karma_orani(gruplar=True) > 0.45
 
 
-def test_bir_kart_ayni_anda_tek_kartla_yan_yanadir():
-    # O tikte gerçekten ölçülen güçlü çiftlere bakılır (paketlerin kendisinden): susan bir kartın çifti
-    # sinyallerde son ölçümüyle 10 sn daha durur, o eski değer buraya karışmamalı.
-    for tik in kos(Benzetim(kisi=25, tohum=2, kopma=False), 10 * 60):
-        yan_yana = {
-            frozenset((paket.kart, diger))
-            for paket in tik.paketler
-            for diger, rssi in paket.duyulanlar
-            if rssi > -62.0  # ayrılmış çiftin tek ölçümü buraya çıkamaz (merkez en çok −79, sapma 3)
-        }
-        kartlar = [kart for cift in yan_yana for kart in cift]
-        assert len(kartlar) == len(set(kartlar)), f"{tik.t}. sn: bir kart iki kartla yan yana"
+def guclu_gruplar(tik):
+    """O tikte gerçekten ölçülen güçlü çiftlerden gruplar (bağlı bileşenler). Susan kartın eski değeri karışmasın
+    diye sinyallere değil paketlere bakılır."""
+    komsu = {}
+    for paket in tik.paketler:
+        for diger, rssi in paket.duyulanlar:
+            if rssi > -62.0:  # ayrılmış çiftin tek ölçümü buraya çıkamaz (merkez en çok −79, sapma 3)
+                komsu.setdefault(paket.kart, set()).add(diger)
+                komsu.setdefault(diger, set()).add(paket.kart)
+    gruplar, gorulen = [], set()
+    for kart in komsu:
+        if kart in gorulen:
+            continue
+        grup, yigin = set(), [kart]
+        while yigin:
+            x = yigin.pop()
+            if x not in grup:
+                grup.add(x)
+                yigin.extend(komsu[x] - grup)
+        gorulen |= grup
+        gruplar.append(grup)
+    return gruplar
+
+
+def test_bos_kart_bazen_var_olan_gruba_katilir_3_4_kisilik_gruplar_olusur_5i_gecmez():
+    # Şevval isteği (2026-10): panoda 3–4 kişilik grupları da görmek. Mock yalnız ikili eşleştirir; gerçek salonda
+    # biri yan yana duran ikiliye katılır. Grup en çok EN_BUYUK_GRUP (5) kişi.
+    boyutlar = set()
+    for tohum in range(3):
+        for tik in kos(Benzetim(kisi=25, tohum=tohum, kopma=False), 30 * 60):
+            boyutlar |= {len(grup) for grup in guclu_gruplar(tik)}
+
+    assert {2, 3, 4} <= boyutlar
+    assert max(boyutlar) <= EN_BUYUK_GRUP
 
 
 def test_ayni_tohum_ayni_paketleri_farkli_tohum_farkli_paketleri_uretir():
@@ -206,7 +233,7 @@ def test_60_saniyede_sinyal_sayisi_ve_grafik_uzunlugu_mock_ile_ayni_buyuklukte()
     MOCK_SINYAL_SAYISI, MOCK_GRAFIK_UZUNLUGU = 8.803, 18.413
     sinyal_sayilari, grafik_uzunluklari = [], []
     for tohum in range(300):
-        benzetim, depo = Benzetim(kisi=25, tohum=tohum), SinyalDeposu()
+        benzetim, depo = Benzetim(kisi=25, tohum=tohum, gruplar=False), SinyalDeposu()  # mock birebir: yalnız ikili
         for tik in kos(benzetim, 60.0):
             depo.ekle(tik.paketler)
         sinyal_sayilari.append(len(depo.sinyaller(60.0)))
