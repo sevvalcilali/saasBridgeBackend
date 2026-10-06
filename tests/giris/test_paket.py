@@ -21,7 +21,7 @@ def test_garip_numara_hata_vermez_kisi_karti_sayilmaz(kart):
 
 def test_bastaki_sifirlar_atilir_ayni_kart_tek_numarayla_gorunur():
     # Arayüz ve mock "007"yi "7" yapar (kartNoCoz); sunucu da her yerde aynı biçimi kullanmalı.
-    paket = Paket(kart="007", duyulanlar=(("012", -60.0), ("0100", -70.0)), pil=None, t=1.0)
+    paket = Paket(kart="007", duyulanlar=(("012", -60.0), ("0100", -70.0)), t=1.0)
 
     assert paket.kart == "7"
     assert paket.duyulanlar == (("12", -60.0), ("100", -70.0))
@@ -29,11 +29,11 @@ def test_bastaki_sifirlar_atilir_ayni_kart_tek_numarayla_gorunur():
 
 def test_dinleyici_cihaz_paketi_isaretlenir_ama_icerigi_durur():
     # 100+ numaralı cihaz kişi değildir ama paketi atılmaz: /api/cards gösterebilir.
-    paket = Paket(kart="101", duyulanlar=(("14", -60.0),), pil=None, t=3.0)
+    paket = Paket(kart="101", duyulanlar=(("14", -60.0),), t=3.0)
 
     assert paket.dinleyici is True
     assert paket.duyulanlar == (("14", -60.0),)
 
 
 def test_kisi_karti_paketi_dinleyici_degildir():
-    assert Paket(kart="14", duyulanlar=(), pil=80, t=3.0).dinleyici is False
+    assert Paket(kart="14", duyulanlar=(), t=3.0).dinleyici is False

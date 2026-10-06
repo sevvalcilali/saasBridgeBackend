@@ -104,14 +104,6 @@ def _alici_rssi(kart: str, t: float) -> float:
     return _yuvarla((-72 - no % 15 + titresim) * 10) / 10
 
 
-def _pil(kart: str, t: float) -> int:
-    """Mock ile aynı sahte pil: 23'ün katı kartlarda zayıf (pil uyarısı görünsün), diğerlerinde yavaş düşer."""
-    no = int(kart)
-    if no % 23 == 0:
-        return max(5, _yuvarla(16 - t / 600))
-    return max(5, _yuvarla(100 - (no * 7) % 40 - t / 180))
-
-
 class Benzetim:
     def __init__(self, kisi: int = 25, tohum: int = 42, kopma: bool = True, gruplar: bool = True) -> None:
         """`gruplar=False`: mock'un birebir davranışı (yalnız ikili; aynı tohumla eski paketlerin aynısı)."""
@@ -146,9 +138,9 @@ class Benzetim:
             return Tik(t, ())  # alıcı yok: hiç paket gelmez, dünya da donar (mock ile aynı)
         self._eslestir(dt, susan)
         duyulan = self._olc(dt, susan)
-        paketler = [Paket(no, tuple(liste), _pil(no, t), t, _alici_rssi(no, t)) for no, liste in duyulan.items()]
+        paketler = [Paket(no, tuple(liste), t, _alici_rssi(no, t)) for no, liste in duyulan.items()]
         # Masadaki yedekler açıktır (alıcı duyar) ama kimseyle ölçülmez; mock'ta da çiftleri yoktur.
-        paketler += [Paket(no, (), _pil(no, t), t, _alici_rssi(no, t)) for no in self.masadaki]
+        paketler += [Paket(no, (), t, _alici_rssi(no, t)) for no in self.masadaki]
         return Tik(t, tuple(paketler))
 
     def kart_ver(self, kart: str, rol: str) -> None:

@@ -51,7 +51,7 @@ def ata(alan: Alan, kisi_id: str, kart: str, duvar: float) -> KartHareketi:
         eski_kart = kisi.atanan_kart
         defter.birak(eski_kart)
         alan.kart_ayril(eski_kart)
-        cikan.append((eski_kart, False))  # değişimde bırakılan kart kapanır (pil bitti, bozuldu)
+        cikan.append((eski_kart, False))  # değişimde bırakılan kart kapanır (bozuldu, kayboldu)
         islem = DEGISIM
     onceki_kimlik = defter.kimlik(kart)  # kart artık sahipsiz: "kart:N"
     defter.ata(kisi_id, kart)

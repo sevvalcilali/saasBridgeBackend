@@ -11,7 +11,7 @@ from yakinlik.giris.paket import Paket
 
 
 def paket(kart, t, *duyulanlar):
-    return Paket(kart=kart, duyulanlar=tuple(duyulanlar), pil=None, t=t)
+    return Paket(kart=kart, duyulanlar=tuple(duyulanlar), t=t)
 
 
 def tek_yonlu(depo, olcumler):
@@ -227,7 +227,7 @@ def test_kalabalik_salonda_tik_basina_sinyal_isleme_butceye_sigar():
         for x, y in ciftler:
             duyulan[x].append((y, rng.gauss(-70, 8)))
             duyulan[y].append((x, rng.gauss(-70, 8)))
-        return [Paket(kart, tuple(liste), 80, t) for kart, liste in duyulan.items()]
+        return [Paket(kart, tuple(liste), t) for kart, liste in duyulan.items()]
 
     depo, t = SinyalDeposu(), 0.0
     for _ in range(190):
@@ -264,12 +264,12 @@ def test_eski_olcumler_bellekte_birikmez():
 
 # --- kart bilgisi (B4: /api/cards) ---
 
-def test_kart_bilgisi_en_yeni_paketten_pil_ve_alicinin_duydugu_guc():
+def test_kart_bilgisi_en_yeni_paketten_alicinin_duydugu_guc():
     depo = SinyalDeposu()
-    depo.ekle([Paket("7", (), 88, 1.0, alici_rssi=-70.0)])
-    depo.ekle([Paket("7", (), 87, 2.0, alici_rssi=-60.0), Paket("101", (), None, 2.0)])
+    depo.ekle([Paket("7", (), 1.0, alici_rssi=-70.0)])
+    depo.ekle([Paket("7", (), 2.0, alici_rssi=-60.0), Paket("101", (), 2.0)])
 
-    assert depo.kart_bilgisi("7", simdi=5.0) == (3.0, 87, -60.0)
-    assert depo.kart_bilgisi("101", simdi=5.0) == (3.0, None, None)
+    assert depo.kart_bilgisi("7", simdi=5.0) == (3.0, -60.0)
+    assert depo.kart_bilgisi("101", simdi=5.0) == (3.0, None)
     assert depo.kart_bilgisi("9", simdi=5.0) is None
     assert depo.duyulan_kartlar() == ["7", "101"]

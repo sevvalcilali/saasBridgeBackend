@@ -71,7 +71,7 @@ def test_her_tikte_salondaki_her_kart_tek_paket_yollar_ve_zaman_ilerler():
         assert {kisi.kart for kisi in benzetim.kadro} <= gonderenler(tik)
         assert len(tik.paketler) == len(gonderenler(tik))
         assert all(paket.t == tik.t for paket in tik.paketler)
-        assert all(paket.pil is not None and 5 <= paket.pil <= 100 for paket in tik.paketler)
+        assert all(not hasattr(paket, "pil") for paket in tik.paketler)  # sahte pil yok (Şevval 07.10.2026)
 
 
 # --- senaryo zamanlaması (mock ile aynı) ---
