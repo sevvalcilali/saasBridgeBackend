@@ -88,3 +88,25 @@ def test_soyad_bossa_ad_tek_basina(defter):
     iceri_aktar(defter, "Ali;;Misafir;;\n")
 
     assert "Ali" in eklenenler(defter, 4)
+
+
+def test_profil_sutunlari_turkce_baslikla_okunur(defter):
+    metin = ("Ad;Soyad;Rol;Kurum;Sektör;Aşama;Tanıtım;Web sitesi;E-posta;İzin\n"
+             "Can;Bulut;Girişimci;Nova;Sağlık;Büyüme;Evde tahlil;nova.com;can@nova.com;Evet\n"
+             "Ece;Tan;Yatırımcı;Fon;Sağlık, Enerji;;;;ece@fon.com;hayır\n")
+
+    sonuc = iceri_aktar(defter, metin)
+
+    yeni = eklenenler(defter, 4)
+    can, ece = yeni["Can Bulut"], yeni["Ece Tan"]
+    assert sonuc.eklenen == 2
+    assert (can.sektor, can.asama, can.tanitim, can.web, can.eposta, can.paylasim) == (
+        "Sağlık", "buyume", "Evde tahlil", "nova.com", "can@nova.com", True)
+    assert (ece.sektor, ece.eposta, ece.paylasim) == ("Sağlık, Enerji", "ece@fon.com", False)
+
+
+def test_basliksiz_dosyada_profil_yildizdan_sonra_bu_sirayla(defter):
+    iceri_aktar(defter, "Can;Bulut;Girişimci;Nova;;Sağlık;MVP;Evde tahlil;nova.com;can@nova.com;evet\n")
+
+    can = eklenenler(defter, 4)["Can Bulut"]
+    assert (can.sektor, can.asama, can.eposta, can.paylasim) == ("Sağlık", "mvp", "can@nova.com", True)

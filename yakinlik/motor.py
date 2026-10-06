@@ -18,7 +18,7 @@ from .cekirdek import atama
 from .cekirdek.alan import Alan
 from .cekirdek.csv_ice import AktarmaSonucu, iceri_aktar
 from .cekirdek.durum import Etkinlik, atamalar_sozluk, durum_uret, js_yuvarla, kartlar_uret, oturumlar_sozluk
-from .cekirdek.kisi import Kisi, KisiDefteri
+from .cekirdek.kisi import PROFIL_METINLERI, Kisi, KisiDefteri
 from .depo.sqlite import Depo
 from .giris.benzetim import Benzetim
 from .giris.kaynak import TIK_SN, PaketKaynagi, Tik
@@ -160,7 +160,9 @@ class Motor:
     def kisi_ekle(self, alanlar: Mapping[str, object]) -> Kisi:
         """Kartsız yeni kişi (panoda görünmez, durum değişmez)."""
         kisi = self.defter.ekle(ad=alanlar.get("ad"), rol=alanlar.get("rol"), kurum=alanlar.get("kurum"),
-                                yildiz=alanlar.get("yildiz"), notu=alanlar.get("not"))
+                                yildiz=alanlar.get("yildiz"), notu=alanlar.get("not"), asama=alanlar.get("asama"),
+                                paylasim=alanlar.get("paylasim"),
+                                **{alan: alanlar.get(alan) for alan in PROFIL_METINLERI})
         self._kaydet()
         return kisi
 

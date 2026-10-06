@@ -1,6 +1,6 @@
 # B7 — Sertleştirme ve dağıtım: teslim notu
 
-> 05.10.2026 · dal `b7-sertlestirme` · Durum: **bitti; Şevval'in onayı bekleniyor** (bağımsız inceleme B8 ile birlikte)
+> 05.10.2026 · dal `b7-sertlestirme` · Durum: **bitti — Şevval onayladı (05.10.2026)** (bağımsız inceleme B8 ile birlikte)
 
 - **Yük (97 kişi, 3 saat, 5 ekran):** 3. saatte tik başına 54 ms ve ekran başına 620 KB'tı; ~%60'ı yalnız Kurulum'un
   kullandığı sinyal grafiği. Şevval kararıyla grafik artık yalnız isteyen ekrana gidiyor (`?grafik=0`; isteyen yoksa

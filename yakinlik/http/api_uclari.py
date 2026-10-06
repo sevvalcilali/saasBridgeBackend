@@ -15,7 +15,9 @@ from ..motor import Motor
 
 def kisi_sozlugu(kisi: Kisi) -> dict:
     return {"kisiId": kisi.kisi_id, "ad": kisi.ad, "rol": kisi.rol, "kurum": kisi.kurum, "yildiz": kisi.yildiz,
-            "not": kisi.notu, "renk": kisi.renk, "atananKart": kisi.atanan_kart, "ayrildi": kisi.ayrildi}
+            "not": kisi.notu, "renk": kisi.renk, "atananKart": kisi.atanan_kart, "ayrildi": kisi.ayrildi,
+            "sektor": kisi.sektor, "asama": kisi.asama, "tanitim": kisi.tanitim, "web": kisi.web,
+            "eposta": kisi.eposta, "paylasim": kisi.paylasim}
 
 
 def _hata(kod: int, metin: str) -> JSONResponse:

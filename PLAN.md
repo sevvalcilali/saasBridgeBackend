@@ -21,8 +21,8 @@
   (05.10.2026; `docs/B2_NOT.md`): Pano, Kurulum ve Sunum gerçek sunucudan (benzetim) canlı veri alıyor.
   B3 (karşılama masası) bitti ve onaylandı (05.10.2026; `docs/B3_NOT.md`).
   B4 (`/api/cards`) bitti ve onaylandı (`docs/B4_NOT.md`). B5 (görüşme kayıtları, atama geçmişi, rapor) bitti ve onaylandı
-  (`docs/B5_NOT.md`). B6 (kalıcılık + sıfırlama) bitti ve onaylandı (`docs/B6_NOT.md`). B7 (sertleştirme + dağıtım) bitti,
-  onay bekliyor (`docs/B7_NOT.md`, `docs/DAGITIM.md`). Sıradaki: B8 (gerçek alıcı; Muhittin'in seri biçim belgesi gerekli).
+  (`docs/B5_NOT.md`). B6 (kalıcılık + sıfırlama) bitti ve onaylandı (`docs/B6_NOT.md`). B7 (sertleştirme + dağıtım) bitti ve
+  onaylandı (`docs/B7_NOT.md`, `docs/DAGITIM.md`). Sıradaki: B8 (gerçek alıcı; Muhittin'in seri biçim belgesi gerekli).
 - **Çalıştırma:** `./baslat.sh` (ya da `.venv/bin/python -m yakinlik`) → `http://localhost:8002`; testler `.venv/bin/pytest`.
 - **Kardeş repo:** https://github.com/sevvalcilali/SaasBridge — arayüz, mock sunucu (`mock-server/mock.js`, davranışın çalışan
   şartnamesi), sözleşme belgesi (`SUNUCUDAN_ISTENENLER.md`), gereksinim belgesi (`UI_TASARIM_BRIEF.md` §2, §5, §9).
@@ -745,8 +745,16 @@ Hiçbiri B0–B2'yi engellemez; varsayılanlar bu belgededir. Soru 1–6'nın ta
       `baslat.bat`, `wheelhouse/`): `docs/B0_NOT.md` → "Ertelenen küçük bulgular".
 - [ ] B1 incelemesinden kalanlar: kayıt bitince yayın sürüyor ✅ (B2); etkinlik saati = kaynak saati, yeniden başlatmada
       sürmesi B6; `--tohum` B2.6 ile; benzetim tik kadansı (bekle-sonra-çalış kayması) açık. Ayrıntı: `docs/B1_NOT.md`.
-- [ ] Arayüz reposu (SaasBridge), ayrı onay: "5 sn" yazan iki metin → 1 dakika (Rapor dipnotu, Kurulum çift tablosu), mock'un
-      `GIRIS_SN` → 60, B2.6 (mock testlerini gerçek sunucuya koşturma). `docs/B2_NOT.md` → "Arayüz reposunda yapılması gerekenler".
+- [x] Arayüz reposu: "5 sn" yazan metinler → 1 dakika (Rapor dipnotu, Kurulum çift tablosu) — SaasBridge PR #4 (2026-10).
+- [ ] Arayüz reposu, ayrı onay: mock'un `GIRIS_SN` → 60, B2.6 (mock testlerini gerçek sunucuya koşturma).
+- [x] Arayüz görünürlük işi (Şevval kararları, 2026-10; SaasBridge PR #3, #4): Pano canlı gruplar + ego görünümü (çizgili ağ
+      kaldırıldı), Kurulum sakin grafik (1 dk+ birlikte, 10 sn ortanca, dakikada bir), Rapor yatırımcı × girişimci matrisi ve
+      kişiye özel tek sayfa rapor. Sunucu sözleşmesi değişmedi.
+- [x] Kişiye özel raporun ikinci adımı (Şevval kararı 2026-10, "önerilen set"): kişiye `sektor` (yatırımcıda ilgi alanları),
+      `asama` (yalnız girişimci), `tanitim`, `web`, `eposta`, `paylasim` (varsayılan hayır; iletişim yalnız izinle
+      paylaşılır). API, CSV, kalıcılık: **şema sürüm 2** — eski dosya açılışta doğrulanmış yedeğe (`yedek/yakinlik-surum-1-…`)
+      alınıp tek işlemde yükseltilir; yarıda kalırsa dosyaya dokunulmaz. Arayüz: kişi formu, CSV, kişiye özel rapor.
+- [ ] Üçüncü adım: kişiye özel raporun e-posta / QR ile dağıtımı. Karar bekliyor.
 - [x] B7: bekçi `--yeni-etkinlik`i tekrarlamıyor. Diske yazım bozulursa arayüzde işaret yok (sözleşme değişikliği
       gerekir); operatör `/api/health` → `veri.yaziliyor` ile görür (`docs/DAGITIM.md`).
 - [ ] `baslat.bat` ve `wheelhouse_hazirla.bat` Windows'ta denenmedi; etkinlik bilgisayarı Windows ise B8 provasında.

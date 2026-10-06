@@ -12,7 +12,8 @@ from yakinlik.http.uygulama import uygulama_olustur
 from yakinlik.motor import Motor
 from yakinlik.saat import SahteSaat
 
-KISI_ALANLARI = ["ad", "atananKart", "ayrildi", "kisiId", "kurum", "not", "renk", "rol", "yildiz"]
+KISI_ALANLARI = sorted(["ad", "atananKart", "ayrildi", "kisiId", "kurum", "not", "renk", "rol", "yildiz",
+                        "sektor", "asama", "tanitim", "web", "eposta", "paylasim"])
 
 
 class BosKaynak:
@@ -58,7 +59,8 @@ async def test_kisi_listesi_alan_alan_ve_kadro_kartli(istemci):
 
     assert [sorted(k) for k in liste] == [KISI_ALANLARI] * 4
     assert liste[0] == {"kisiId": "k1", "ad": "Ayşe Demir", "rol": "investor", "kurum": "Atlas Ventures",
-                        "yildiz": 3, "not": "", "renk": "#3987e5", "atananKart": "2", "ayrildi": False}
+                        "yildiz": 3, "not": "", "renk": "#3987e5", "atananKart": "2", "ayrildi": False,
+                        "sektor": "", "asama": "", "tanitim": "", "web": "", "eposta": "", "paylasim": False}
 
 
 async def test_yeni_kisi_kartsiz_kayitta_var_panoda_yok(istemci):
@@ -264,3 +266,17 @@ async def test_atama_gecmisi_zaman_damgali(istemci):
 
     assert [(g["kisiId"], g["kart"], g["islem"]) for g in gecmis] == [("k5", "40", "ata"), ("k5", "40", "geri_al")]
     assert all(sorted(g) == ["islem", "kart", "kisiId", "t"] and g["t"] == 1e9 for g in gecmis)
+
+
+async def test_profil_alanlari_eklenir_duzenlenir_listede_doner(istemci):
+    yanit = await gonder(istemci, "POST", "/api/people", {
+        "ad": "Can", "rol": "founder", "sektor": "Sağlık", "asama": "mvp", "tanitim": "Evde tahlil",
+        "web": "nova.com", "eposta": "can@nova.com", "paylasim": True,
+    })
+    kisi_id = yanit.json()["kisiId"]
+    await gonder(istemci, "PATCH", f"/api/people/{kisi_id}", {"asama": "gelir", "paylasim": False})
+    (kisi,) = [k for k in (await istemci.get("/api/people")).json() if k["kisiId"] == kisi_id]
+
+    assert {k: kisi[k] for k in ("sektor", "asama", "tanitim", "web", "eposta", "paylasim")} == {
+        "sektor": "Sağlık", "asama": "gelir", "tanitim": "Evde tahlil", "web": "nova.com", "eposta": "can@nova.com",
+        "paylasim": False}
