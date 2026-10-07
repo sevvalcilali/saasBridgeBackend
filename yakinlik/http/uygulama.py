@@ -88,7 +88,7 @@ def _statik_yanit(dist: Path, yol: str) -> Response:
         if index.is_file():
             # no-cache: arayüz yeniden derlenince tarayıcı eski index.html'i (silinmiş .js adlarıyla) kullanmasın.
             return FileResponse(index, media_type=_TURLER[".html"], headers={"Cache-Control": "no-cache"})
-        return PlainTextResponse(f"Arayüz derlenmedi: {index} yok. SaasBridge'de `npm run build` çalıştırın.\n")
+        return PlainTextResponse(f"Arayüz derlenmedi: {index} yok. arayuz/ klasöründe `npm ci && npm run build` çalıştırın.\n")
     # Önce yolun kendisine bak, dosya sistemine sorma: Windows'ta \\sunucu\paylasim ya da C:\… yolunu
     # çözmek bile o sunucuya oturum açar ve olay döngüsünü kilitler. dist/ içindeki dosyalarda bunlar olmaz.
     if yol.startswith("/") or "\\" in yol or ":" in yol or "\x00" in yol or ".." in yol.split("/"):

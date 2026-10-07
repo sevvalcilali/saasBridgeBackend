@@ -18,7 +18,7 @@ def test_config_ve_arguman_yokken_sozlesme_varsayilanlari(tmp_path):
 
     assert ayar.port == 8002          # arayüzün Vite proxy'si 8002'ye gider
     assert ayar.kaynak == "benzetim"  # donanım yok: benzetimle başlanır
-    assert ayar.dist == Path("../SaasBridge/dist")
+    assert ayar.dist == Path("arayuz/dist")  # arayüz bu reponun arayuz/ klasöründe (07.10.2026)
     assert ayar.esik == -72           # brief §2 varsayılan eşik
     assert ayar.veri is None
     assert ayar.seri is None

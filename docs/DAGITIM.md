@@ -5,8 +5,8 @@ Bu belge sunucuyu etkinlik bilgisayarına kurmak ve etkinlik günü çalıştır
 
 ## 1. Önceden (internet varken, etkinlikten en geç bir gün önce)
 
-1. İki repo yan yana: `…/SaasBridge` (arayüz) ve `…/saasBridgeBackend` (sunucu).
-2. Arayüzü derleyin: `SaasBridge` klasöründe `npm ci && npm run build` → `SaasBridge/dist/`.
+1. Repo tek: `…/saasBridgeBackend` (sunucu kökte, web arayüzü `arayuz/` klasöründe).
+2. Arayüzü derleyin: `arayuz/` klasöründe `npm ci && npm run build` → `arayuz/dist/`.
 3. Kurulum paketlerini indirin. Bunu **etkinlik bilgisayarıyla aynı işletim sisteminde ve Python sürümünde** yapın,
    çünkü paketlerin bir kısmı derlenmiş ve sisteme özel:
    - macOS / Linux: `./araclar/wheelhouse_hazirla.sh`
@@ -40,8 +40,8 @@ Kişi listesi masadaki CSV ile yüklenir (Kart Ver → CSV).
 | 5 | Canlı akış | Pano canlı (saat ilerliyor); `/api/health` → `istemci` açık ekran sayısı kadar |
 | 6 | Masa | Kart Ver → "Boştaki kartlar"da masadaki yedek kartlar görünüyor |
 | 7 | Eşik | Kurulum → eşik dünkü / provadaki değer (kalıcıdır) |
-| 8 | Kart sağlığı | Kurulum → "Kart sağlığı": pili düşük ya da duyulmayan kart yok |
-| 9 | Arayüz güncel | `SaasBridge/dist/` son `npm run build`'den |
+| 8 | Kart sağlığı | Kurulum → "Kart sağlığı": duyulmayan ya da görünmeyen kart yok |
+| 9 | Arayüz güncel | `arayuz/dist/` son `npm run build`'den |
 
 ## 4. Etkinlik sırasında
 
