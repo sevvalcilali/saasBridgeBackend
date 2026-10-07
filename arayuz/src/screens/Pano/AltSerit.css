@@ -1,0 +1,44 @@
+/* Alt şerit — özet sayılar + ilerleme çubuğu. Yalnız token. */
+
+.alt-serit {
+  display: flex;
+  align-items: center;
+  gap: var(--aralik-5);
+  flex-wrap: wrap;
+}
+
+.alt-kutular {
+  display: flex;
+  gap: var(--aralik-5);
+  flex-wrap: wrap;
+  flex: 1;
+}
+.alt-kutu { display: flex; flex-direction: column; gap: 1px; }
+.alt-deger { font-size: var(--punto-buyuk); font-weight: 700; line-height: 1; }
+.alt-ad { color: var(--metin-2); font-size: var(--punto-kucuk); }
+
+.alt-ilerleme {
+  display: flex;
+  align-items: center;
+  gap: var(--aralik-2);
+  min-width: 200px;
+}
+.alt-ilerleme-cubuk {
+  flex: 1;
+  height: 8px;
+  background: var(--yuzey-2);
+  border-radius: var(--kose-tam);
+  overflow: hidden;
+}
+.alt-ilerleme-dolu {
+  height: 100%;
+  background: var(--vurgu);
+  border-radius: var(--kose-tam);
+  transition: width var(--gecis-yavas);
+}
+.alt-ilerleme-yazi { color: var(--metin-2); font-size: var(--punto-kucuk); flex: none; }
+
+@media (max-width: 640px) {
+  .alt-kutular { gap: var(--aralik-4); }
+  .alt-ilerleme { width: 100%; }
+}

@@ -1,0 +1,80 @@
+/* Sunum modu — salon ekranı. Tek ekran, kaydırma yok; 2–3 metreden okunur. Yalnız token. */
+.sunum {
+  position: relative;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--aralik-4);
+  padding: var(--aralik-5) var(--aralik-6);
+  overflow: hidden;
+  transition: opacity var(--gecis);
+}
+.sunum--bos { align-items: center; justify-content: center; }
+.sunum--soluk > *:not(.hata-bantlari):not(.sunum-araclar) { opacity: 0.5; }
+.sunum-bilgi { color: var(--metin-2); font-size: var(--punto-buyuk); }
+
+.sunum-ust {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: var(--aralik-5);
+}
+.sunum-ad { margin: 0; font-size: clamp(28px, 3.2vw, 56px); line-height: 1.1; }
+.sunum-alt { margin: var(--aralik-1) 0 0; color: var(--metin-2); font-size: clamp(16px, 1.4vw, 24px); }
+.sunum-saat { font-size: clamp(40px, 5vw, 88px); font-weight: 800; line-height: 1; }
+
+.sunum-alt-serit { display: flex; flex-direction: column; gap: var(--aralik-2); }
+.sunum-kutular {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--aralik-3);
+}
+.sunum-kutu {
+  display: flex;
+  flex-direction: column;
+  padding: var(--aralik-3) var(--aralik-4);
+  background: var(--yuzey);
+  border: 1px solid var(--cizgi);
+  border-radius: var(--kose);
+}
+.sunum-deger { font-size: clamp(26px, 2.6vw, 48px); font-weight: 800; line-height: 1.1; }
+.sunum-kutu-ad { color: var(--metin-2); font-size: clamp(14px, 1.1vw, 20px); }
+.sunum-anahtar { margin: 0; text-align: center; color: var(--metin-2); font-size: clamp(14px, 1.1vw, 20px); }
+.sunum-birlikte { color: var(--birlikte); font-weight: 700; }
+
+/* Araç çubuğu: köşede, soluk; üzerine gelince / klavyeyle odaklanınca belirir. */
+.sunum-araclar {
+  position: absolute;
+  top: var(--aralik-2);
+  right: var(--aralik-3);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--aralik-2);
+  opacity: 0.15;
+  transition: opacity var(--gecis);
+}
+.sunum-araclar:hover, .sunum-araclar:focus-within { opacity: 1; }
+.sunum-cikis {
+  font-size: var(--punto-kucuk);
+  font-weight: 700;
+  color: var(--metin-2);
+  text-decoration: none;
+  padding: var(--aralik-1) var(--aralik-3);
+  border: 1px solid var(--cizgi);
+  border-radius: var(--kose-tam);
+  background: var(--yuzey-2);
+}
+.sunum-cikis:hover { color: var(--metin); }
+
+@media (hover: none) { .sunum-araclar { opacity: 1; } }
+@media (max-width: 1024px) { .sunum-cikis { min-height: 36px; display: inline-flex; align-items: center; } }
+@media (max-width: 900px) {
+  /* Tablet/telefon: tek ekrana sığdırmaya çalışma, kaydırılabilir; ağ kendi oranında */
+  .sunum { padding: var(--aralik-4); height: auto; min-height: 100vh; min-height: 100dvh; overflow: visible; }
+  .sunum-araclar { position: static; justify-content: flex-end; flex-wrap: wrap; opacity: 1; }
+}

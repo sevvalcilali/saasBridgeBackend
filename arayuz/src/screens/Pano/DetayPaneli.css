@@ -1,0 +1,95 @@
+/* Kişi detay paneli — sağdan açılan modal-OLMAYAN çekmece: panel açıkken
+   liste/ağ etkileşimli kalır (başka kişiye tıklayınca panel geçer). Token. */
+
+.detay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 11;
+  width: min(380px, 92vw);
+  height: 100vh;
+  height: 100dvh; /* telefonda adres çubuğu hesaba katılır */
+  overflow: auto;
+  background: var(--yuzey);
+  border-left: 1px solid var(--cizgi);
+  box-shadow: var(--golge-panel);
+  padding: var(--aralik-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--aralik-4);
+  animation: detay-gir var(--gecis);
+}
+@keyframes detay-gir { from { transform: translateX(20px); opacity: 0.4; } }
+@media (prefers-reduced-motion: reduce) { .detay { animation: none; } }
+
+.detay-bas {
+  display: grid;
+  grid-template-columns: 14px 14px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--aralik-2);
+}
+.detay-renk { width: 14px; height: 14px; border-radius: var(--kose-tam); }
+/* Paylaşılan .kisi-rol liste gridinden grid-area taşır; burada sıfırla */
+.detay-bas .kisi-rol { grid-area: auto; align-self: center; }
+.detay-ad-blok { min-width: 0; display: flex; flex-direction: column; }
+.detay-ad { font-size: var(--punto-orta); }
+.detay-rol { color: var(--metin-2); font-size: var(--punto-kucuk); }
+.detay-rol .kisi-yildiz, .detay-rol { }
+
+.detay-kapat {
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid var(--cizgi-koyu);
+  background: var(--yuzey);
+  color: var(--metin-2);
+  border-radius: var(--kose-tam);
+  width: 40px; height: 40px; /* dokunmatik hedef */
+  line-height: 1;
+}
+.detay-kapat:hover { background: var(--yuzey-2); }
+
+.detay-bilgi { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: var(--aralik-3); }
+.detay-bilgi > div { display: flex; flex-direction: column; gap: 1px; }
+.detay-bilgi dt { color: var(--metin-2); font-size: var(--punto-kucuk); }
+.detay-bilgi dd { margin: 0; font-weight: 600; }
+
+.detay-baslik {
+  margin: 0;
+  font-size: var(--punto-kucuk);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--metin-2);
+}
+.detay-bos { color: var(--metin-2); margin: 0; }
+
+.detay-gorusmeler { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--aralik-2); }
+.detay-gorusmeler li {
+  display: grid;
+  /* renk · rol şekli · ad · süre (rol şekli T4'te eklendi; sütun sayısı onunla büyüdü) */
+  grid-template-columns: 12px auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--aralik-2);
+  padding: var(--aralik-2) var(--aralik-3);
+  background: var(--zemin);
+  border: 1px solid var(--cizgi);
+  border-radius: var(--kose-kucuk);
+}
+.detay-g-renk { width: 12px; height: 12px; border-radius: var(--kose-tam); }
+.detay-g-ad { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.detay-g-sure { color: var(--metin-2); font-size: var(--punto-kucuk); }
+
+/* Faz 4: kart kısayolları (masa ekranını hazır açar) */
+.detay-kisayol { display: flex; gap: var(--aralik-2); flex-wrap: wrap; }
+.detay-kisayol-bag {
+  flex: 1; min-height: 40px; display: grid; place-items: center; text-decoration: none;
+  font-weight: 700; font-size: var(--punto-kucuk); color: var(--metin);
+  border: 1px solid var(--cizgi-koyu); border-radius: var(--kose); background: var(--zemin);
+  padding: 0 var(--aralik-3);
+}
+.detay-kisayol-bag:hover { background: var(--vurgu-zemin); }
+.detay-kisayol-bag:focus-visible { outline: 2px solid var(--vurgu); outline-offset: 2px; }
+
+/* Telefon (≤600): panel tam ekran — arkada kalan şerit işe yaramıyordu; Kapat/Escape listeye döndürür */
+@media (max-width: 600px) {
+  .detay { width: 100vw; border-left: 0; padding: var(--aralik-3); }
+}

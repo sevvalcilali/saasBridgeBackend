@@ -18,7 +18,7 @@ class Ayar:
     port: int = 8002
     host: str = "0.0.0.0"  # masa tableti ve salon ekranı başka cihazdan bağlanır (PLAN Bölüm 11)
     kaynak: str = "benzetim"
-    dist: Path = Path("../SaasBridge/dist")
+    dist: Path = Path("arayuz/dist")  # arayüz bu reponun arayuz/ klasöründe; yol çalışılan klasöre göre
     veri: Path | None = None  # kalıcı veri klasörü; verilmezse veri_klasoru() kuralı
     seri: str | None = None
     esik: float = -72
@@ -134,7 +134,7 @@ def _komut_satirindan(ayar: Ayar, argumanlar: Sequence[str] | None) -> Ayar:
     ayristirici = argparse.ArgumentParser(prog="python -m yakinlik", description="Yakınlık Takip Sistemi sunucusu")
     ayristirici.add_argument("--port", type=int, help="dinlenecek port")
     ayristirici.add_argument("--kaynak", choices=KAYNAKLAR, help="paket kaynağı")
-    ayristirici.add_argument("--dist", type=Path, help="derlenmiş arayüz klasörü (SaasBridge/dist)")
+    ayristirici.add_argument("--dist", type=Path, help="derlenmiş arayüz klasörü (arayuz/dist)")
     ayristirici.add_argument("--veri", type=Path, help="kalıcı veri klasörü (gerçek alıcıda varsayılan: veri)")
     ayristirici.add_argument("--seri", help="alıcının seri aygıtı (ör. /dev/ttyUSB0, COM5)")
     ayristirici.add_argument("--kisi", type=_pozitif_tam, help="benzetimdeki kişi sayısı (en çok 97)")

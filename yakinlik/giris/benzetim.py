@@ -1,4 +1,4 @@
-"""Donanımsız benzetim: mock sunucunun (SaasBridge/mock-server/mock.js) `tik()` dinamiğinin paket üreten hali.
+"""Donanımsız benzetim: mock sunucunun (arayuz/mock-server/mock.js) `tik()` dinamiğinin paket üreten hali.
 
 Senaryo zamanlaması mock ile aynıdır (benzetim saniyesi): atanmamış Kart 14 → 45. sn; kayıp kart →
 180–300. sn arası susar; alıcı kopması → 120. sn'de 20 sn, sonra 480. sn'den başlayarak her 360 sn'de.

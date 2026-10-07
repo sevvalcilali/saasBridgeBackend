@@ -1,0 +1,181 @@
+/* ============================================================
+   SICAK KARŞILAMA — token setleri (açık varsayılan + koyu)
+   Krem zemin, pastel vurgular, yuvarlak hatlar. (PLAN Bölüm 1 kararı;
+   Golden Hour / Desert Rose temalarının sıcaklığı temel alındı.)
+   Kurallar (brief §10):
+   - Yeşil YALNIZ "şu an birlikte" demektir (--birlikte).
+   - Kişi renkleri kimliği tek başına taşımaz; yanında ad + rol şekli olur.
+   - Kişi paleti brief'in koyu paletinin açık zeminde doğrulanmış
+     uyarlamasıdır; #199e70 çıkarıldı (yeşil "birlikte"ye ayrıldı).
+   - Koyu tema (Faz 5): <html data-tema="koyu">; aynı token adları, koyu
+     yüzeyde doğrulanmış değerler. Yazdırma her zaman açık temayla olur.
+   - Tüm değerler kontrast testiyle denetlenir: kontrast.test.js (iki tema)
+   ============================================================ */
+
+:root {
+  /* --- Yüzeyler (krem katmanları) --- */
+  --zemin: #f7f2e9;        /* sayfa zemini */
+  --yuzey: #fffdf8;        /* kart / panel */
+  --yuzey-2: #efe7d8;      /* girinti, ikincil dolgu */
+  --cizgi: #e2d8c4;        /* ince ayırıcı */
+  --cizgi-koyu: #cfc2a9;   /* belirgin kenarlık */
+
+  /* --- Metin (sıcak kahve tonları) --- */
+  --metin: #3b332c;        /* ana metin  (≥7:1) */
+  --metin-2: #6b6156;      /* ikincil    (≥4.5:1) */
+  --metin-soluk: #92897c;  /* ipucu; yalnız büyük punto */
+  --metin-ters: #fffdf8;   /* koyu dolgu üstü metin */
+
+  /* --- Vurgu (etkileşim: düğme, bağlantı, seçim) --- */
+  --vurgu: #9a6512;
+  --vurgu-zemin: #f5e8cf;
+
+  /* --- Durumlar: her zaman ikon + yazı ile birlikte kullanılır --- */
+  --birlikte: #1b7a4e;         /* YEŞİL = yalnız "şu an birlikte" */
+  --birlikte-zemin: #e0f2e4;
+  --olumlu: #856000;           /* anlaşma/olumlu: altın (yeşil DEĞİL) */
+  --olumlu-zemin: #f6ead0;
+  --uyari: #b4470e;            /* yalnız kaldı vb. */
+  --uyari-zemin: #fbe6d9;
+  --ciddi: #b02a25;            /* kart kayboldu, alıcı yok */
+  --ciddi-zemin: #f9e2e0;
+  --pasif: #6d675e;            /* görünmüyor/boşta gri */
+  --pasif-zemin: #eeeae1;
+
+  /* --- Görüşme süresi (Pano siluetleri): ısınan ölçek, Şevval kararı 2026-10-06. Her zaman yazılı süre +
+     açıklamayla birlikte; açılır uyarılar kendi çerçevesiyle gelir (bu renklerle karışmaz). --- */
+  --sure-1: #7a7369;           /* 1–5 dk: gri */
+  --sure-5: #2a7fd0;           /* 5–10 dk: mavi (Şevval 06.10.2026: gri-mavi-turuncu-kırmızı) */
+  --sure-10: #d2621a;          /* 10–20 dk: turuncu */
+  --sure-20: #c42d28;          /* 20 dk+: kırmızı */
+
+  /* --- Uyarı kuralı (organizatörün kuralı; açılır pencere): süre renkleriyle ve uyarılarla karışmayan lacivert --- */
+  --kural: #2b5797;
+  --kural-zemin: #e3ebf7;
+
+  /* --- Kişi paleti (Faz 5: dataviz doğrulayıcısıyla yeniden adımlandı; sıra sunucu paletiyle eş)
+         Açık yüzeyde: her renk ≥3:1; normal görüşte tüm çiftler OKLab ΔE ≥15;
+         renk körlüğünde (protan/deutan) sıra komşuları ≥8. kontrast.test.js denetler. --- */
+  --kisi-mavi: #1245af;
+  --kisi-turuncu: #854412;
+  --kisi-hardal: #968403;
+  --kisi-pembe: #920f6d;
+  --kisi-mor: #895cd2;
+  --kisi-mercan: #cc646f;
+  --kisi-petrol: #248fb2; /* sunucudan #199e70 gelirse buna eşlenir */
+  --kisi-gri: #302f2e;
+
+  /* --- Yazı (çevrimdışı kural: yalnız sistem fontları) --- */
+  --yazi: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --punto-kucuk: 13px;
+  --punto: 15px;
+  --punto-orta: 17px;
+  --punto-buyuk: 22px;
+  --punto-dev: 30px;      /* 2–3 metreden okunacak değerler */
+
+  /* --- Boşluk ve biçim (yuvarlak hatlar) --- */
+  --aralik-1: 4px;
+  --aralik-2: 8px;
+  --aralik-3: 12px;
+  --aralik-4: 16px;
+  --aralik-5: 24px;
+  --aralik-6: 32px;
+  --kose-kucuk: 8px;
+  --kose: 12px;
+  --kose-buyuk: 20px;
+  --kose-tam: 999px;
+  --golge: 0 1px 3px rgba(59, 51, 44, 0.08), 0 4px 16px rgba(59, 51, 44, 0.06);
+  --golge-panel: -8px 0 24px rgba(59, 51, 44, 0.12);
+  --yari-saydam: rgba(255, 255, 255, 0.35);
+
+  /* --- Sakin hareket (brief: zıplama yok, yumuşak geçiş) --- */
+  --gecis: 300ms ease;
+  --gecis-yavas: 600ms ease;
+}
+
+/* ============================================================
+   KOYU TEMA — salonda / laptopta uzun süre açık kalan ekran (brief §10).
+   Sıcak koyu kahve yüzeyler; yeşil yine yalnız "birlikte".
+   Yalnız ekranda: yazdırma/PDF her zaman açık temayla basılır.
+   ============================================================ */
+@media screen {
+  :root[data-tema="koyu"] {
+    color-scheme: dark;
+
+    --zemin: #181614;
+    --yuzey: #221f1b;
+    --yuzey-2: #2c2823;
+    --cizgi: #3a342d;
+    --cizgi-koyu: #51493f;
+
+    --metin: #f2ebe0;
+    --metin-2: #c5b9a8;
+    --metin-soluk: #968b7c;
+    --metin-ters: #181614;
+
+    --vurgu: #e2a852;
+    --vurgu-zemin: #3b2f1c;
+
+    --birlikte: #4cc38a;
+    --birlikte-zemin: #16301f;
+    --olumlu: #dcb54a;
+    --olumlu-zemin: #352b12;
+    --uyari: #f08c52;
+    --uyari-zemin: #3d2316;
+    --ciddi: #f2726a;
+    --ciddi-zemin: #3f1c1a;
+    --pasif: #a69c8f;
+    --pasif-zemin: #2d2925;
+
+    --sure-1: #b3aa9d;
+    --sure-5: #5fa4e6;
+    --sure-10: #f38d45;
+    --sure-20: #f2675f;
+    --kural: #7fa8ea;
+    --kural-zemin: #1b2638;
+
+    /* Kişi paleti koyu yüzeyde: her renk ≥3:1; normal görüşte tüm çiftler ΔE ≥15;
+       renk körlüğünde sıra komşuları ≥8. */
+    --kisi-mavi: #3f65ee;
+    --kisi-turuncu: #d8772c;
+    --kisi-hardal: #827205;
+    --kisi-pembe: #a15b88;
+    --kisi-mor: #ad74ee;
+    --kisi-mercan: #ea2052;
+    --kisi-petrol: #3397be;
+    --kisi-gri: #c2aea5;
+
+    --golge: 0 1px 3px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.3);
+    --golge-panel: -8px 0 24px rgba(0, 0, 0, 0.5);
+    --yari-saydam: rgba(0, 0, 0, 0.25);
+  }
+}
+
+/* --- Kırılma noktaları (tek yerde; bileşen CSS'leri bu değerleri kullanır) ---
+   ≤480 dar telefon · ≤600 telefon · 601–900 tablet dikey / yatay telefon ·
+   901–1100 tablet yatay, küçük laptop · >1100 masaüstü.
+   Dokunmatik (≤1024): her düğme/bağlantı/seçici ≥36 px, birincil olanlar ≥40 px. */
+
+/* --- Temel --- */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  /* Çentikli telefonlarda içerik güvenli alanda kalsın (viewport-fit=cover) */
+  padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  background: var(--zemin);
+  color: var(--metin);
+  font-family: var(--yazi);
+  font-size: var(--punto);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Sayı sütunları titremesin (saat, süre) */
+.sayi { font-variant-numeric: tabular-nums; }
+
+/* Yalnız ekran okuyucu için metin (görsel olarak gizli). */
+.gorunmez {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}

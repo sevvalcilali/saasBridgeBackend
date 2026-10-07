@@ -1,5 +1,9 @@
 # PLAN — Yakınlık Takip Sistemi Sunucusu (`saasBridgeBackend`)
 
+> **07.10.2026:** Arayüz reposu (`SaasBridge`) geçmişiyle bu repoya, `arayuz/` klasörüne taşındı. Aşağıda "kardeş repo
+> `SaasBridge`" ve `../SaasBridge/…` geçen yerler artık `arayuz/…` demektir (ör. `arayuz/SUNUCUDAN_ISTENENLER.md`,
+> `arayuz/mock-server/mock.js`, derlenmiş arayüz `arayuz/dist`). Eski metin tarihçe olarak bırakıldı.
+
 > Bu repo, `SaasBridge` reposundaki arayüzün (Vite + React) **gerçek sunucusudur**: alıcıdan gelen kart paketlerini işler,
 > "birlikte mi?" kararını verir, kişi/kart/atama/görüşme kayıtlarını tutar ve arayüze `/state`, `/events`, `/control`,
 > `/api/*` uçlarını aynı adresten sunar. Sözleşme ve ürün kuralları arayüz reposunda tanımlıdır; burada **tekrar edilmez,

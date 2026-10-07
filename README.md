@@ -1,12 +1,14 @@
-# saasBridgeBackend — Yakınlık Takip Sistemi Sunucusu
+# saasBridgeBackend — Yakınlık Takip Sistemi (sunucu + web arayüzü)
 
-Arayüzün (https://github.com/sevvalcilali/SaasBridge) gerçek sunucusu: alıcıdan gelen kart paketlerini işler,
-"birlikte mi?" kararını verir, kişi / kart / atama / görüşme kayıtlarını tutar ve `/state`, `/events` (SSE),
-`/control`, `/api/*` uçlarını arayüzle aynı adresten sunar.
+Tek repo (07.10.2026'dan beri): **sunucu** (Python, kök klasör) ve **web arayüzü** (React + Vite, `arayuz/`).
+Sunucu alıcıdan gelen kart paketlerini işler, "birlikte mi?" kararını verir, kişi / kart / atama / görüşme kayıtlarını
+tutar ve `/state`, `/events` (SSE), `/control`, `/api/*` uçlarını derlenmiş arayüzle (`arayuz/dist`) aynı adresten sunar.
+Arayüzün geçmişi korunarak eklendi (eski repo: https://github.com/sevvalcilali/SaasBridge). Mobil uygulama ayrı repoda:
+https://github.com/sevvalcilali/saasBridgeMobil.
 
 - Tek plan belgesi: `PLAN.md` (önce bunu oku) — çalışma kuralları, mimari, veri modeli, sözleşme, kalıcılık, test,
   fazlar, riskler
-- Sözleşme belgesi ve davranış referansı (mock): kardeş repo `SaasBridge` → `SUNUCUDAN_ISTENENLER.md`, `mock-server/mock.js`
+- Sözleşme belgesi ve davranış referansı (mock): `arayuz/SUNUCUDAN_ISTENENLER.md`, `arayuz/mock-server/mock.js`
 
 **Durum (05.10.2026):**
 
@@ -24,7 +26,14 @@ Teknoloji: Python 3.11+, FastAPI + uvicorn, pyserial, SQLite (stdlib).
 
 ## Kurulum ve çalıştırma
 
-Gereken: Python 3.11+. Arayüz reposu yan klasörde (`../SaasBridge`) ve derlenmiş olmalı (orada `npm run build`).
+Gereken: Python 3.11+ ve Node 20+. Arayüz bir kez derlenir (sunucu `arayuz/dist`'i sunar):
+
+```bash
+cd arayuz && npm ci && npm run build && cd ..
+```
+
+Testler: sunucu `.venv/bin/python -m pytest`, arayüz `cd arayuz && npm test`. Arayüz geliştirme: `cd arayuz && npx vite`
+(sunucu 8002'de açıkken, Vite istekleri ona yönlendirir).
 
 ```bash
 ./baslat.sh                  # sanal ortam hazır değilse kurar, sunucuyu başlatır → http://localhost:8002
