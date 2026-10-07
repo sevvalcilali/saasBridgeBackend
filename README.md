@@ -20,7 +20,7 @@ https://github.com/sevvalcilali/saasBridgeMobil.
 - B6 (kalıcılık + sıfırlama): veri SQLite'ta, sunucu yeniden açılınca kaldığı yerden sürer (`docs/B6_NOT.md`).
 - B7 (sertleştirme + dağıtım): bekçi, girdi sınırları, günlük, çevrimdışı kurulum, yük ölçümü (`docs/B7_NOT.md`).
   Etkinlik bilgisayarına kurulum ve etkinlik günü kontrol listesi: **`docs/DAGITIM.md`**.
-- Donanım (kartlar + alıcı) var ve test edildi; gerçek alıcıya bağlama B8'de.
+- Donanım (kartlar + alıcı) var ve test edildi; gerçek alıcıya bağlama B8'de. Muhittin için devir notu: **`docs/MUHITTIN_B8.md`**.
 
 Teknoloji: Python 3.11+, FastAPI + uvicorn, pyserial, SQLite (stdlib).
 

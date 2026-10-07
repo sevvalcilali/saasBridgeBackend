@@ -40,7 +40,7 @@ class Paket:
     kart: str  # paketi gönderen kart ("14")
     duyulanlar: tuple[tuple[str, float], ...]  # bu kartın duyduğu kartlar: (kart, dBm)
     t: float  # paketin geldiği an (kaynak saniyesi; `Tik.t` ile aynı ölçek)
-    alici_rssi: float | None = None  # alıcının bu paketi duyduğu güç (dBm); masadaki "yaklaştır ve tanı" bunu kullanır
+    alici_rssi: float | None = None  # alıcının bu paketi duyduğu güç (dBm); /api/cards rssiAlici alanı
 
     def __post_init__(self) -> None:
         # Numaralar tek biçime çevrilir: "007" ile "7" aynı karttır, iki ayrı kart sayılmamalı.
