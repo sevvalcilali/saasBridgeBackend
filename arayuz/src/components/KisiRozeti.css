@@ -1,0 +1,12 @@
+/* Kişi rozeti: renk + rol şekli + ad + kart no. Renk yoksa (bilinmeyen kart) nötr halka. */
+.kisi-rozeti { display: inline-flex; align-items: center; gap: var(--aralik-1); min-width: 0; max-width: 100%; }
+.kisi-rozeti-renk {
+  width: 10px; height: 10px; flex: none; border-radius: var(--kose-tam);
+  background: transparent; box-shadow: inset 0 0 0 2px var(--cizgi-koyu);
+}
+.kisi-rozeti-rol { width: 9px; height: 9px; flex: none; border: 2px solid var(--metin-2); }
+.kisi-rozeti-rol--investor { border-radius: var(--kose-tam); }
+.kisi-rozeti-rol--founder { border-radius: 2px; }
+.kisi-rozeti-rol--guest { transform: rotate(45deg) scale(0.85); }
+.kisi-rozeti-ad { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.kisi-rozeti-kart { color: var(--metin-soluk); font-size: var(--punto-kucuk); }

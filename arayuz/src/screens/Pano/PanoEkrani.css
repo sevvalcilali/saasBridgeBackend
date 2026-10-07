@@ -1,0 +1,136 @@
+/* Pano düzeni — yalnız token kullanır. 3 bölgeli dikey akış:
+   üst şerit · gövde (3 sütun) · alt şerit. */
+
+.pano {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--aralik-4);
+  padding: var(--aralik-4);
+  transition: opacity var(--gecis);
+}
+.pano--bos { align-items: center; justify-content: center; }
+/* Bağlantı kopunca içerik solar ama SİLİNMEZ; bantlar net kalır (brief §11) */
+.pano--soluk > *:not(.hata-bantlari) { opacity: 0.5; transition: opacity var(--gecis); }
+
+.bilgi { color: var(--metin-2); }
+
+.pano-ust {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--aralik-4);
+  min-height: 64px;
+  padding: var(--aralik-3) var(--aralik-4);
+  background: var(--yuzey);
+  border: 1px solid var(--cizgi);
+  border-radius: var(--kose);
+  box-shadow: var(--golge);
+}
+
+.canli-rozet {
+  color: var(--birlikte);
+  font-size: var(--punto-kucuk);
+  font-weight: 600;
+}
+
+/* Gövde (Şevval 2026-10-06, "ekran üçe bölünmesin"): üstte baştan başa salon (orta), altında sol (kişi) ve
+   sağ (bildirim) yan yana. */
+.pano-govde {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(320px, 1.4fr) minmax(280px, 1fr);
+  grid-template-areas: 'orta orta' 'sol sag';
+  gap: var(--aralik-4);
+  min-height: 0;
+}
+.pano-sol { grid-area: sol; }
+.pano-sag { grid-area: sag; }
+.pano-orta { grid-area: orta; }
+
+.pano-sol, .pano-orta, .pano-sag {
+  background: var(--yuzey);
+  border: 1px solid var(--cizgi);
+  border-radius: var(--kose);
+  box-shadow: var(--golge);
+  padding: var(--aralik-4);
+  min-height: 200px;
+  overflow: auto;
+}
+/* Ağ, liste yüksekliğine gerilmesin; kendi boyunda üstte dursun (tam
+   viewport-oturması 1.15'te). */
+.pano-orta { align-self: start; }
+
+.pano-alt {
+  min-height: 56px;
+  padding: var(--aralik-3) var(--aralik-4);
+  background: var(--yuzey);
+  border: 1px solid var(--cizgi);
+  border-radius: var(--kose);
+  box-shadow: var(--golge);
+}
+
+/* İskele etiketleri — yalnız bu adımda görünür, içerik gelince kalkar */
+.iskele-etiket {
+  color: var(--metin-soluk);
+  font-size: var(--punto-kucuk);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Sekme çubuğu — yalnız telefonda (≤600px) görünür */
+.pano-sekmeler { display: none; gap: var(--aralik-1); }
+.pano-sekme {
+  flex: 1;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  padding: var(--aralik-2);
+  border: 1px solid var(--cizgi-koyu);
+  border-radius: var(--kose);
+  background: var(--yuzey);
+  color: var(--metin-2);
+}
+.pano-sekme--secili { background: var(--vurgu); border-color: var(--vurgu); color: var(--metin-ters); }
+
+/* Geniş tablet (901–1100): aynı düzen, sütunlar daralabilir */
+@media (max-width: 1100px) {
+  .pano-govde { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
+}
+
+/* Tablet (≤900): tek sütun yığın — bildirimler üstte (yatay), liste, ağ altta */
+@media (max-width: 900px) {
+  .pano-govde {
+    grid-template-columns: 1fr;
+    grid-template-areas: 'sag' 'sol' 'orta';
+  }
+  .pano-orta { align-self: stretch; }
+}
+
+/* Telefon (≤600): sekmeler görünür, aynı anda tek bölge */
+@media (max-width: 600px) {
+  .pano-sekmeler { display: flex; }
+  .pano-govde[data-sekme='kisiler'] > :not(.pano-sol),
+  .pano-govde[data-sekme='ag'] > :not(.pano-orta),
+  .pano-govde[data-sekme='bildirimler'] > :not(.pano-sag) { display: none; }
+}
+
+/* Telefon: boşluklar küçülür, sekmeler dokunmatik boyda */
+@media (max-width: 600px) {
+  .pano { padding: var(--aralik-2); gap: var(--aralik-3); }
+  .pano-sol, .pano-orta, .pano-sag { padding: var(--aralik-3); }
+  .pano-sekme { min-height: 44px; }
+}
+
+/* Orta bölge üst satırı: görünüm seçici (Şimdi / Gün boyu) + Büyük görünüm */
+.pano-ag-ust { display: flex; align-items: center; justify-content: space-between; gap: var(--aralik-3); flex-wrap: wrap; margin-bottom: var(--aralik-3); }
+.pano-buyut { min-height: 36px; font-size: var(--punto-kucuk); font-weight: 700; }
+.pano-buyut[aria-pressed='true'] { background: var(--vurgu-zemin); }
+
+/* Büyük görünüm: yalnız orta bölge, tam genişlik (kişiler ve bildirimler katlanır) */
+.pano--buyuk .pano-govde { grid-template-columns: minmax(0, 1fr); grid-template-areas: none; }
+.pano--buyuk .pano-sol, .pano--buyuk .pano-sag { display: none; }
+.pano--buyuk .pano-orta { grid-area: auto; align-self: stretch; }
+/* Telefonda bölümler zaten sekmeli: düğme gereksiz */
+@media (max-width: 600px) { .pano-buyut { display: none; } }

@@ -1,0 +1,134 @@
+/* Canlı gruplar — "salon" görünümü, yalnız token. Kümeler tek yatay alanda yan yana akar; biten grubun yeri boş
+   kalır (sakin: komşular kaymaz). Figürler küçük (olağan Pano 34px), kümede arka + ön sıra. */
+
+.gruplar { display: flex; flex-direction: column; gap: var(--aralik-3); }
+
+/* Salon: zemin alta doğru koyulaşır (oda hissi); üstte kümeler, altta kenarda boştakiler. */
+.salon {
+  border-radius: var(--kose);
+  background: linear-gradient(180deg, transparent, var(--yuzey-2));
+  padding: var(--aralik-3) var(--aralik-3) var(--aralik-2);
+}
+
+.gruplar-alan {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--aralik-2) var(--aralik-4);
+  min-height: 7rem;
+}
+
+.grup { display: flex; flex-direction: column; align-items: center; gap: 2px; transition: opacity var(--gecis); }
+.grup--bos { width: 6.5rem; min-height: 1px; }
+
+.grup-etiket { font-size: var(--punto-kucuk); color: var(--metin-2); font-weight: 600; }
+.grup--karma .grup-etiket { color: var(--birlikte); }
+.grup-adlar {
+  font-size: 11px; line-height: 1.2; color: var(--metin-2); text-align: center; max-width: 13rem;
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+
+/* Sahne: arka sıra biraz küçük ve geride, ön sıra onun önüne biner (küme); altta zemin gölgesi, karma grupta yeşil. */
+.grup-sahne {
+  --fig: 34px;
+  position: relative;
+  display: flex; flex-direction: column; align-items: center;
+  padding: var(--aralik-1) var(--aralik-2) var(--aralik-2);
+  border-radius: var(--kose);
+  background: radial-gradient(ellipse 50% 22% at 50% 84%, var(--yuzey-2) 0 70%, transparent 72%);
+}
+.grup--karma .grup-sahne { background: radial-gradient(ellipse 50% 22% at 50% 84%, var(--birlikte-zemin) 0 70%, transparent 72%); }
+.gruplar:not(.gruplar--sunum) .grup-sahne { cursor: pointer; }
+.grup--n4 .grup-sahne { --fig: 32px; }
+.grup--n5 .grup-sahne { --fig: 30px; }
+
+.grup-sira { list-style: none; margin: 0; padding: 0; display: flex; align-items: flex-end; justify-content: center; }
+.grup-sira--arka { position: relative; z-index: 0; }
+.grup-sira--arka .figur { transform: scale(0.9); transform-origin: 50% 100%; opacity: 0.85; }
+.grup-sira--on { position: relative; z-index: 1; }
+.gruplar--sade .grup-sira--arka + .grup-sira--on { margin-top: calc(var(--fig) * -0.9); }
+.gruplar--sade .grup-sira--on .figur { margin: 0 -3px; }
+
+.figur-kap, .figur { display: flex; }
+.figur {
+  flex-direction: column; align-items: center; gap: 1px;
+  width: calc(var(--fig) + 10px);
+  font: inherit; color: var(--metin); background: none; border: 1px solid transparent; border-radius: var(--kose); padding: 2px 0;
+}
+.gruplar--sade .figur { width: calc(var(--fig) + 2px); padding: 0; }
+button.figur { cursor: pointer; }
+button.figur:hover, .figur--secili { border-color: var(--vurgu); background: var(--yuzey); }
+.figur--vurgulu { border-color: var(--vurgu); background: var(--vurgu-zemin); }
+.siluet { width: var(--fig); height: calc(var(--fig) * 1.66); display: block; transition: color var(--gecis); }
+.figur-ad {
+  font-size: 11px; font-weight: 600; line-height: 1.15; text-align: center; max-width: 100%;
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.figur-sure .grup-renk { display: inline-block; width: 7px; height: 7px; margin-right: 3px; vertical-align: 1px; } /* kişinin kendi rengi */
+.figur-sure { font-size: 11px; font-weight: 700; }
+.grup-renk { width: 10px; height: 10px; flex: none; border-radius: var(--kose-tam); }
+.grup-fazla { align-self: center; color: var(--metin-2); font-size: var(--punto-kucuk); font-weight: 700; padding: 0 var(--aralik-1); }
+
+/* Süre renk açıklaması */
+.sure-anahtari { margin: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: var(--aralik-1) var(--aralik-3); font-size: var(--punto-kucuk); color: var(--metin-2); }
+.sure-anahtari-bas { font-weight: 700; }
+.sure-anahtari-oge { display: inline-flex; align-items: center; gap: var(--aralik-1); }
+.sure-anahtari-renk { width: 12px; height: 12px; border-radius: 3px; }
+
+/* Bildirime ya da gruba tıklayınca: ilgili gruplar kalır, diğerleri solar (3 sn, PanoEkrani). */
+.gruplar[data-vurgu] .grup:not(.grup--vurgulu):not(.grup--bos) { opacity: 0.3; }
+
+.gruplar-yok { margin: var(--aralik-4) 0; text-align: center; color: var(--metin-2); }
+
+/* Salonun kenarı: boştakiler küçük, soluk figürler; yalnız kalan önemli yatırımcı uyarı renginde. */
+.bosta { border-top: 1px dashed var(--cizgi); margin-top: var(--aralik-2); padding-top: var(--aralik-2); }
+.bosta-baslik { margin: 0 0 var(--aralik-1); font-size: var(--punto-kucuk); text-transform: uppercase; letter-spacing: 0.04em; color: var(--metin-2); }
+.bosta-gorunmeyen { color: var(--metin-soluk); }
+.bosta-liste { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 2px var(--aralik-1); }
+.bosta-kisi {
+  display: flex; flex-direction: column; align-items: center; gap: 0; width: 4.3rem;
+  font: inherit; font-size: 10px; line-height: 1.15; color: var(--metin-2);
+  border: 1px solid transparent; border-radius: var(--kose); background: none; padding: 2px 0; cursor: pointer;
+}
+.bosta-kisi:hover { border-color: var(--cizgi-koyu); background: var(--yuzey); }
+.siluet--bosta { width: 20px; height: 33px; animation: none; opacity: 0.8; }
+.bosta-ad { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bosta-kisi--yalniz { color: var(--uyari); border-color: var(--uyari); background: var(--uyari-zemin); }
+.bosta-kisi--yalniz .siluet--bosta { opacity: 1; }
+.bosta-yalniz { font-weight: 700; }
+
+/* Sunum modu (salon ekranı): 2–3 metreden okunur; tıklanmaz; adlar figürün altında. */
+.gruplar--sunum { flex: 1; min-height: 0; }
+.gruplar--sunum .gruplar-alan { gap: var(--aralik-4) var(--aralik-5); }
+.gruplar--sunum .grup-sahne { --fig: 84px; }
+.gruplar--sunum .grup--n4 .grup-sahne { --fig: 76px; }
+.gruplar--sunum .grup--n5 .grup-sahne { --fig: 70px; }
+.gruplar--sunum .figur-ad, .gruplar--sunum .figur-sure { font-size: var(--punto-kucuk); }
+.gruplar--sunum .grup-etiket, .gruplar--sunum .bosta-baslik, .gruplar--sunum .sure-anahtari { font-size: var(--punto-orta); }
+
+/* Pano "Büyük görünüm": figürler büyük, adlar altında, tıklanabilir. */
+.gruplar--buyuk .gruplar-alan { gap: var(--aralik-4) var(--aralik-5); }
+.gruplar--buyuk .grup-sahne { --fig: 64px; }
+.gruplar--buyuk .grup--n4 .grup-sahne { --fig: 58px; }
+.gruplar--buyuk .grup--n5 .grup-sahne { --fig: 54px; }
+.gruplar--buyuk .figur-ad, .gruplar--buyuk .figur-sure { font-size: var(--punto-kucuk); }
+.gruplar--buyuk .grup-etiket, .gruplar--buyuk .sure-anahtari { font-size: var(--punto-orta); }
+.gruplar--buyuk .siluet--bosta { width: 28px; height: 46px; }
+.gruplar--buyuk .bosta-kisi { width: 4.4rem; font-size: 11px; }
+
+/* Sakin hareket (Şevval isteği 2026-10-06): figürler ayaklarının üstünde hafifçe salınır (her biri farklı anda),
+   yeni grup yumuşakça belirir. Yalnız tüm figürün dönmesi: ekran kartı yapar (will-change), tarayıcı her karede
+   yeniden çizmez. SVG'nin içindeki parçayı oynatmak (eski el sallama) her karede stil + çizim istiyordu (ölçüm:
+   ana iş parçacığı %2 → %5,8, ekran çizimi ayrıca); bu yüzden kaldırıldı. Boştakiler salınmaz (kalabalık, ucuz). */
+.grup .siluet { transform-origin: 50% 96%; will-change: transform; animation: siluet-salin 5.5s ease-in-out infinite; animation-delay: var(--gecikme, 0s); }
+@keyframes siluet-salin { 0%, 100% { transform: rotate(-1.4deg); } 50% { transform: rotate(1.4deg); } }
+.grup:not(.grup--bos) { animation: grup-gir 0.7s ease-out both; }
+@keyframes grup-gir { from { opacity: 0; transform: translateY(10px) scale(0.97); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .grup, .siluet { transition: none; }
+  .siluet, .grup:not(.grup--bos) { animation: none; }
+}
+
+/* Konum notu (ego görünümüyle ortak): yerler salondaki yeri göstermez. */
+.ag-not { margin: 0; color: var(--metin-soluk); font-size: var(--punto-kucuk); text-align: center; }

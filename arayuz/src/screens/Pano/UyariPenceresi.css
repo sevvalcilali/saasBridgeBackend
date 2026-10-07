@@ -1,0 +1,20 @@
+/* Açılır uyarı: süre renkleri (gri/sarı/turuncu/kırmızı) ve uyarı bildirimleriyle karışmasın diye kendi lacivert
+   çerçevesi ve zil simgesi. Ekranın üstünde, ortada; altındaki panoyu kilitlemez. */
+.uyari-pencere {
+  position: fixed; top: var(--aralik-4); left: 50%; transform: translateX(-50%); z-index: 20;
+  width: min(560px, calc(100vw - 2 * var(--aralik-4)));
+  display: grid; grid-template-columns: auto 1fr; gap: var(--aralik-2) var(--aralik-3);
+  padding: var(--aralik-4); border-radius: var(--kose);
+  background: var(--yuzey); border: 2px solid var(--kural); border-left-width: 8px; box-shadow: var(--golge-panel);
+  animation: uyari-gir 0.35s ease-out;
+}
+@keyframes uyari-gir { from { opacity: 0; transform: translate(-50%, -12px); } }
+@media (prefers-reduced-motion: reduce) { .uyari-pencere { animation: none; } }
+.uyari-pencere-ikon { color: var(--kural); font-size: 1.6rem; line-height: 1; }
+.uyari-pencere-metin p { margin: 0; }
+.uyari-pencere-ust { color: var(--kural); font-size: var(--punto-kucuk); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.uyari-pencere-baslik { font-size: var(--punto-buyuk); font-weight: 700; margin-top: 2px !important; }
+.uyari-pencere-ayrinti { color: var(--metin); }
+.uyari-pencere-kisiler { color: var(--metin-2); font-size: var(--punto-kucuk); margin-top: var(--aralik-1) !important; }
+.uyari-pencere-dugmeler { grid-column: 1 / -1; display: flex; gap: var(--aralik-2); align-items: center; justify-content: flex-end; flex-wrap: wrap; }
+.uyari-pencere-sira { margin-right: auto; order: -1; color: var(--metin-2); font-size: var(--punto-kucuk); font-weight: 700; }

@@ -1,0 +1,239 @@
+/* Kişi listesi ve satır — yalnız token. */
+
+.kisi-listesi { display: flex; flex-direction: column; gap: var(--aralik-4); }
+
+/* Arama + filtre çubuğu */
+.filtre-cubugu {
+  position: sticky;
+  top: calc(-1 * var(--aralik-4));
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--aralik-2);
+  padding-bottom: var(--aralik-2);
+  background: var(--yuzey);
+}
+.filtre-arama {
+  font: inherit;
+  width: 100%;
+  padding: var(--aralik-2) var(--aralik-3);
+  border: 1px solid var(--cizgi-koyu);
+  border-radius: var(--kose-tam);
+  background: var(--zemin);
+  color: var(--metin);
+}
+.filtre-arama::placeholder { color: var(--metin-soluk); }
+.filtre-arama:focus-visible { outline: 2px solid var(--vurgu); outline-offset: 1px; }
+
+.filtre-dugmeler { display: flex; flex-wrap: wrap; gap: var(--aralik-1); }
+.filtre-dugme {
+  font: inherit;
+  font-size: var(--punto-kucuk);
+  cursor: pointer;
+  padding: 3px var(--aralik-3);
+  border: 1px solid var(--cizgi-koyu);
+  border-radius: var(--kose-tam);
+  background: var(--zemin);
+  color: var(--metin-2);
+  transition: background var(--gecis), color var(--gecis);
+}
+.filtre-dugme:hover { background: var(--yuzey-2); }
+.filtre-dugme--secili {
+  background: var(--vurgu);
+  border-color: var(--vurgu);
+  color: var(--metin-ters);
+  font-weight: 600;
+}
+
+.filtre-sirala {
+  display: flex; align-items: center; gap: var(--aralik-2);
+  font-size: var(--punto-kucuk); font-weight: 700; color: var(--metin-2);
+}
+.filtre-sirala select {
+  font: inherit; font-weight: 600; color: var(--metin);
+  background: var(--zemin); border: 1px solid var(--cizgi-koyu); border-radius: var(--kose-kucuk);
+  padding: 2px var(--aralik-2);
+}
+.filtre-sirala select:focus-visible { outline: 2px solid var(--vurgu); outline-offset: 1px; }
+
+.kisi-bos { color: var(--metin-2); padding: var(--aralik-4) 0; }
+
+.kisi-grup-baslik {
+  display: flex;
+  align-items: center;
+  gap: var(--aralik-2);
+  margin: 0 0 var(--aralik-2);
+  font-size: var(--punto-kucuk);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--metin-2);
+}
+.kisi-grup-sayi {
+  background: var(--yuzey-2);
+  color: var(--metin-2);
+  border-radius: var(--kose-tam);
+  padding: 0 var(--aralik-2);
+  font-size: var(--punto-kucuk);
+  font-weight: 700;
+}
+
+.kisi-grup-liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--aralik-2);
+}
+
+.kisi-satiri {
+  display: grid;
+  grid-template-columns: 14px 14px minmax(0, 1fr) auto;
+  grid-template-areas: 'renk rol ad sure' 'renk rol durum sure';
+  column-gap: var(--aralik-3);
+  row-gap: 2px;
+  align-items: center;
+  padding: var(--aralik-3);
+  background: var(--zemin);
+  border: 1px solid var(--cizgi);
+  border-left: 3px solid var(--cizgi);
+  border-radius: var(--kose);
+  transition: background var(--gecis), border-color var(--gecis);
+}
+
+/* Bildirimden gelen vurgu: parıltı, 3 kez, sonra normale döner (brief §7).
+   Hareketi azalt tercihinde animasyon yerine sabit halka. */
+@keyframes kisi-parilti {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  30% { box-shadow: 0 0 0 3px var(--vurgu); }
+}
+.kisi-satiri--vurgulu {
+  animation: kisi-parilti 0.8s ease 3;
+  position: relative;
+  z-index: 2;
+}
+@media (prefers-reduced-motion: reduce) {
+  .kisi-satiri--vurgulu { animation: none; box-shadow: 0 0 0 2px var(--vurgu); }
+}
+
+/* Durum renkleri — her biri renk + ikon + yazı ile (renk körlüğü kuralı).
+   Kontrastlar tokens kontrast testiyle doğrulanmıştır. */
+.kisi-satiri[data-durum='talking'] {
+  background: var(--birlikte-zemin);
+  border-color: var(--cizgi);
+  border-left-color: var(--birlikte);   /* YEŞİL = şu an birlikte */
+}
+.kisi-satiri[data-durum='away'] {
+  background: var(--yuzey-2);
+  border-left-color: var(--pasif);
+}
+.kisi-satiri[data-atanmamis] {
+  background: var(--uyari-zemin);
+  border-color: var(--uyari);
+  border-left-color: var(--uyari);
+}
+.kisi-satiri { cursor: pointer; }
+.kisi-satiri:focus-visible { outline: 2px solid var(--vurgu); outline-offset: 1px; }
+.kisi-satiri[data-secili] { box-shadow: inset 0 0 0 2px var(--vurgu); }
+
+.kisi-renk {
+  grid-area: renk;
+  width: 14px;
+  height: 14px;
+  border-radius: var(--kose-tam);
+}
+
+/* Rol şekilleri (brief §6.4): ○ yatırımcı · □ girişimci · ◇ misafir.
+   Kimlik yalnız renkle değil şekille de verilir. */
+.kisi-rol {
+  grid-area: rol;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--metin-2);
+}
+.kisi-rol--investor { border-radius: var(--kose-tam); }
+.kisi-rol--founder { border-radius: 3px; }
+.kisi-rol--guest { transform: rotate(45deg); }
+
+.kisi-ad {
+  grid-area: ad;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kisi-ad strong { font-weight: 600; }
+.kisi-ad-kisi { color: var(--metin-2); font-weight: 400; }
+.kisi-yildiz { color: var(--olumlu); white-space: nowrap; }
+
+.kisi-durum {
+  grid-area: durum;
+  display: flex;
+  align-items: center;
+  gap: var(--aralik-1);
+  color: var(--metin-2);
+  font-size: var(--punto-kucuk);
+  overflow: hidden;
+  white-space: nowrap;
+}
+.kisi-durum-ikon { flex: none; font-size: 12px; }
+
+/* Durum yazısının rengi (satır zemini ile kontrastı doğrulanmış) */
+.kisi-satiri[data-durum='talking'] .kisi-durum { color: var(--birlikte); font-weight: 600; }
+.kisi-durum--atanmamis { color: var(--uyari) !important; font-weight: 700; }
+
+.kisi-ata-dugme {
+  grid-area: sure;
+  font: inherit;
+  font-size: var(--punto-kucuk);
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  color: var(--metin-ters);
+  background: var(--uyari);
+  border: none;
+  border-radius: var(--kose-tam);
+  padding: 4px var(--aralik-3);
+  transition: opacity var(--gecis);
+}
+.kisi-ata-dugme:hover { opacity: 0.9; }
+
+.kisi-sure {
+  grid-area: sure;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  color: var(--metin-2);
+  font-size: var(--punto-kucuk);
+  white-space: nowrap;
+}
+/* Karşı rol sayısı (brief §7.2): toplam sürenin altında, daha hafif. */
+.kisi-karsi { font-size: var(--punto-kucuk); color: var(--metin-2); opacity: 0.85; }
+
+/* Dar telefon (≤420px): durum cümlesi kesilmesin, ikinci satıra insin. */
+@media (max-width: 420px) {
+  .kisi-durum { white-space: normal; align-items: flex-start; }
+}
+
+/* Dokunmatik (≤1024): çipler, sıralama seçici ve "Kişi ata" ≥40 px */
+@media (max-width: 1024px) {
+  .filtre-dugme { min-height: 40px; padding: 0 var(--aralik-3); }
+  .filtre-sirala select { min-height: 40px; }
+  .kisi-ata-dugme { min-height: 40px; }
+}
+/* Telefon (≤600): çubuk sabit değil (ekranı yemesin); çipler tek sıra yatay kaydırmalı; satır sıkı */
+@media (max-width: 600px) {
+  .filtre-cubugu { position: static; }
+  .filtre-dugmeler { flex-wrap: nowrap; overflow-x: auto; padding-bottom: var(--aralik-1); scrollbar-width: none; }
+  .filtre-dugmeler::-webkit-scrollbar { display: none; }
+  .filtre-dugme { flex: none; white-space: nowrap; }
+  .filtre-sirala select { flex: 1; min-width: 0; }
+  .kisi-satiri { padding: var(--aralik-2) var(--aralik-3); column-gap: var(--aralik-2); }
+}
+/* Dar telefon (≤480): ad kesilmek yerine sarar (yıldızlar bölünmez) */
+@media (max-width: 480px) {
+  .kisi-ad { white-space: normal; }
+  .kisi-yildiz { white-space: nowrap; }
+}

@@ -1,0 +1,49 @@
+/* Uygulama kabuğu + ekran geçiş çubuğu. Yalnız token. */
+
+.uyg-nav {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--aralik-1);
+  padding: var(--aralik-2) var(--aralik-4) 0;
+}
+.uyg-nav-bag {
+  text-decoration: none;
+  font-weight: 700;
+  color: var(--metin-2);
+  padding: var(--aralik-2) var(--aralik-4);
+  border-radius: var(--kose) var(--kose) 0 0;
+  border: 1px solid transparent;
+}
+.uyg-nav-bag:hover { background: var(--yuzey-2); }
+.uyg-nav-bag--secili {
+  color: var(--metin);
+  background: var(--yuzey);
+  border-color: var(--cizgi);
+  border-bottom-color: var(--yuzey);
+}
+.uyg-nav-sag { margin-left: auto; align-self: center; display: flex; align-items: center; gap: var(--aralik-3); }
+.uyg-nav-sunum { font-size: var(--punto-kucuk); font-weight: 700; color: var(--metin-2); text-decoration: none; }
+.uyg-nav-sunum:hover { color: var(--metin); text-decoration: underline; }
+
+/* Dokunmatik (≤1024): sunum bağlantısı hap biçiminde, ≥40 px */
+@media (max-width: 1024px) {
+  .uyg-nav-sunum {
+    min-height: 40px; display: inline-flex; align-items: center;
+    padding: 0 var(--aralik-3); border: 1px solid var(--cizgi); border-radius: var(--kose-tam);
+  }
+}
+/* Telefon (≤600): dört sekme eşit genişlikte tek sıra (44 px); altında sunum bağlantısı + tema */
+@media (max-width: 600px) {
+  .uyg-nav {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--aralik-1); padding: var(--aralik-2) var(--aralik-2) 0;
+  }
+  .uyg-nav-bag {
+    display: grid; place-items: center; min-height: 44px; text-align: center;
+    padding: var(--aralik-1); font-size: 14px;
+    border-radius: var(--kose); border-color: var(--cizgi);
+  }
+  .uyg-nav-bag--secili { border-bottom-color: var(--cizgi); }
+  .uyg-nav-sag { grid-column: 1 / -1; margin-left: 0; justify-content: flex-end; padding: var(--aralik-1) 0; }
+}

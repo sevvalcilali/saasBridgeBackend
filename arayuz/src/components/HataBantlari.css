@@ -1,0 +1,15 @@
+/* Sayfa üstü hata bantları — ciddi renk + ⚠ ikon + yazı (brief §11) */
+.hata-bantlari { display: flex; flex-direction: column; gap: var(--aralik-2); }
+.hata-bant {
+  display: flex;
+  align-items: center;
+  gap: var(--aralik-2);
+  margin: 0;
+  padding: var(--aralik-3) var(--aralik-4);
+  background: var(--ciddi-zemin);
+  color: var(--ciddi);
+  border: 1px solid var(--ciddi);
+  border-radius: var(--kose);
+  font-weight: 700;
+}
+.hata-bant-not { color: var(--metin-2); font-weight: 400; font-size: var(--punto-kucuk); }

@@ -1,0 +1,18 @@
+/* Ego görünümü — yalnız token. Yeşil yalnız "şu an birlikte". */
+.ego { display: flex; flex-direction: column; gap: var(--aralik-2); }
+.ego-ozet { margin: 0; color: var(--metin-2); }
+.ego-ozet strong { color: var(--metin); }
+.ego-svg { width: 100%; height: auto; aspect-ratio: 1400 / 790; }
+.ego-cizgi { stroke: var(--cizgi-koyu); stroke-linecap: round; opacity: 0.8; }
+.ego-cizgi--karma { stroke: var(--metin-2); }
+.ego-cizgi--simdi { stroke: var(--birlikte); opacity: 1; stroke-dasharray: 10 8; }
+.ego-es { cursor: pointer; }
+.ego-es:hover .ego-ad { fill: var(--vurgu); }
+.ego-ad { font-size: 34px; font-weight: 600; fill: var(--metin); font-family: var(--yazi);
+  paint-order: stroke; stroke: var(--yuzey); stroke-width: 6px; stroke-linejoin: round; }
+.ego-ad--merkez { font-size: 38px; font-weight: 700; }
+.ego-sure { font-size: 28px; fill: var(--metin-2); font-family: var(--yazi);
+  paint-order: stroke; stroke: var(--yuzey); stroke-width: 6px; stroke-linejoin: round; }
+.ego-sure--simdi { fill: var(--birlikte); font-weight: 700; }
+.ego-not { margin: 0; color: var(--metin-2); font-size: var(--punto-kucuk); }
+.ego-sec { margin: var(--aralik-5) 0; text-align: center; color: var(--metin-2); }

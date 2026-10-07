@@ -1,0 +1,92 @@
+/* Bildirim akışı — yalnız token. Renk severity'den, ikon kind'dan. */
+
+.bildirim-akisi { display: flex; flex-direction: column; gap: var(--aralik-3); }
+
+.bildirim-baslik {
+  display: flex; align-items: center; gap: var(--aralik-2);
+  margin: 0;
+  font-size: var(--punto-kucuk);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--metin-2);
+}
+.bildirim-sayi {
+  background: var(--yuzey-2); color: var(--metin-2);
+  border-radius: var(--kose-tam); padding: 0 var(--aralik-2);
+  font-size: var(--punto-kucuk); font-weight: 700;
+}
+.bildirim-bos { color: var(--metin-2); }
+
+.bildirim-liste {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: var(--aralik-2);
+}
+
+.bildirim {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--aralik-3);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: var(--metin);
+  background: var(--yuzey);
+  border: 1px solid var(--cizgi);
+  border-left: 4px solid var(--cizgi-koyu);
+  border-radius: var(--kose);
+  padding: var(--aralik-3);
+  transition: background var(--gecis), box-shadow var(--gecis);
+}
+.bildirim:hover { background: var(--yuzey-2); }
+.bildirim--secili { box-shadow: 0 0 0 2px var(--vurgu); }
+
+/* severity → sol kenar + ikon rengi (renk + ikon + yazı birlikte) */
+.bildirim--deal { border-left-color: var(--olumlu); background: var(--olumlu-zemin); }
+.bildirim--deal .bildirim-ikon { color: var(--olumlu); }
+.bildirim--warn { border-left-color: var(--uyari); background: var(--uyari-zemin); }
+.bildirim--warn .bildirim-ikon { color: var(--uyari); }
+.bildirim--serious { border-left-color: var(--ciddi); background: var(--ciddi-zemin); }
+.bildirim--serious .bildirim-ikon { color: var(--ciddi); }
+.bildirim--kural { border-left-color: var(--kural); background: var(--kural-zemin); }
+.bildirim--kural .bildirim-ikon { color: var(--kural); }
+
+.bildirim-ikon { display: flex; align-items: center; padding-top: 1px; }
+
+.bildirim-govde { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.bildirim-ust { display: flex; align-items: baseline; gap: var(--aralik-2); justify-content: space-between; }
+.bildirim-title { font-size: var(--punto); }
+.bildirim-saat { color: var(--metin-2); font-size: var(--punto-kucuk); flex: none; }
+.bildirim-detay { color: var(--metin-2); font-size: var(--punto-kucuk); }
+
+/* Önem süzgeci: küçük düğmeler, kişi listesindeki filtre düğmeleriyle aynı dil */
+.bildirim-suzgec { display: flex; flex-wrap: wrap; gap: var(--aralik-1); }
+.bildirim-suzgec-dugme {
+  font: inherit; font-size: var(--punto-kucuk); cursor: pointer;
+  padding: 3px var(--aralik-3);
+  border: 1px solid var(--cizgi-koyu); border-radius: var(--kose-tam);
+  background: var(--zemin); color: var(--metin-2);
+  transition: background var(--gecis), color var(--gecis);
+}
+.bildirim-suzgec-dugme:hover { background: var(--yuzey-2); }
+.bildirim-suzgec-dugme--secili { background: var(--vurgu); border-color: var(--vurgu); color: var(--metin-ters); font-weight: 600; }
+.bildirim-suzgec-dugme .sayi { opacity: 0.8; }
+
+/* "Tümünü göster" / "Son 20": sakin bir metin düğmesi */
+.bildirim-kalan {
+  font: inherit; font-size: var(--punto-kucuk); font-weight: 600; cursor: pointer;
+  color: var(--vurgu); background: none; border: 1px dashed var(--cizgi-koyu); border-radius: var(--kose);
+  padding: var(--aralik-2) var(--aralik-3); margin: 0; text-align: left;
+}
+.bildirim-kalan:hover { background: var(--yuzey-2); }
+
+/* Tablet (601–900): bildirimler yatay kaydırma şeridi */
+@media (min-width: 601px) and (max-width: 900px) {
+  .bildirim-liste { flex-direction: row; overflow-x: auto; padding-bottom: var(--aralik-2); }
+  .bildirim-liste > li { flex: 0 0 auto; width: 280px; }
+}
+
+@media (max-width: 1024px) {
+  .bildirim-suzgec-dugme { min-height: 40px; padding: 0 var(--aralik-3); }
+  .bildirim-kalan { min-height: 44px; }
+}

@@ -1,0 +1,27 @@
+/* Tema seçici: küçük, sakin iki düğme. Yalnız token. */
+.tema-secici {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--cizgi);
+  border-radius: var(--kose-tam);
+  background: var(--yuzey-2);
+}
+.tema-secici-dugme {
+  font: inherit;
+  font-size: var(--punto-kucuk);
+  font-weight: 700;
+  color: var(--metin-2);
+  background: transparent;
+  border: 0;
+  border-radius: var(--kose-tam);
+  padding: var(--aralik-1) var(--aralik-3);
+  cursor: pointer;
+}
+.tema-secici-dugme[aria-pressed="true"] {
+  color: var(--metin);
+  background: var(--yuzey);
+  box-shadow: var(--golge);
+}
+.tema-secici-dugme:focus-visible { outline: 2px solid var(--vurgu); outline-offset: 2px; }
+
+@media (max-width: 1024px) { .tema-secici-dugme { min-height: 36px; padding: 0 var(--aralik-3); } }
